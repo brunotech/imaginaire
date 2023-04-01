@@ -96,9 +96,9 @@ def get_model_optimizer_and_scheduler(cfg, seed=0):
     lib_D = importlib.import_module(cfg.dis.type)
     net_G = lib_G.Generator(cfg.gen, cfg.data).to('cuda')
     net_D = lib_D.Discriminator(cfg.dis, cfg.data).to('cuda')
-    print('Initialize net_G and net_D weights using '
-          'type: {} gain: {}'.format(cfg.trainer.init.type,
-                                     cfg.trainer.init.gain))
+    print(
+        f'Initialize net_G and net_D weights using type: {cfg.trainer.init.type} gain: {cfg.trainer.init.gain}'
+    )
     init_bias = getattr(cfg.trainer.init, 'bias', None)
     net_G.apply(weights_init(
         cfg.trainer.init.type, cfg.trainer.init.gain, init_bias))
@@ -153,10 +153,7 @@ def wrap_model_and_optimizer(cfg, net_G, net_D, opt_G, opt_D):
         amp.initialize([net_G, net_D], [opt_G, opt_D],
                        opt_level=cfg.trainer.amp, num_losses=2)
     # For dealing with numerical issues that might happen during training.
-    if cfg.trainer.model_average:
-        net_G_module = net_G.module
-    else:
-        net_G_module = net_G
+    net_G_module = net_G.module if cfg.trainer.model_average else net_G
     if hasattr(net_G_module, 'custom_init'):
         net_G_module.custom_init()
 
@@ -199,20 +196,18 @@ def _wrap_model(cfg, model):
     Returns:
         (obj): Wrapped PyTorch network model.
     """
-    if torch.distributed.is_available() and dist.is_initialized():
-        ddp = cfg.trainer.distributed_data_parallel
-        if ddp == 'pytorch':
-            return torch.nn.parallel.DistributedDataParallel(
-                model,
-                device_ids=[cfg.local_rank],
-                output_device=cfg.local_rank,
-                find_unused_parameters=True)
-        else:
-            delay_allreduce = cfg.trainer.delay_allreduce
-            return apex.parallel.DistributedDataParallel(
-                model, delay_allreduce=delay_allreduce)
-    else:
+    if not torch.distributed.is_available() or not dist.is_initialized():
         return WrappedModel(model)
+    ddp = cfg.trainer.distributed_data_parallel
+    if ddp == 'pytorch':
+        return torch.nn.parallel.DistributedDataParallel(
+            model,
+            device_ids=[cfg.local_rank],
+            output_device=cfg.local_rank,
+            find_unused_parameters=True)
+    delay_allreduce = cfg.trainer.delay_allreduce
+    return apex.parallel.DistributedDataParallel(
+        model, delay_allreduce=delay_allreduce)
 
 
 def get_scheduler(cfg_opt, opt):
@@ -233,8 +228,9 @@ def get_scheduler(cfg_opt, opt):
     elif cfg_opt.lr_policy.type == 'constant':
         scheduler = lr_scheduler.LambdaLR(opt, lambda x: 1)
     else:
-        return NotImplementedError('Learning rate policy {} not implemented.'.
-                                   format(cfg_opt.lr_policy.type))
+        return NotImplementedError(
+            f'Learning rate policy {cfg_opt.lr_policy.type} not implemented.'
+        )
     return scheduler
 
 
@@ -300,6 +296,5 @@ def get_optimizer_for_params(cfg_opt, params):
                       momentum=cfg_opt.momentum,
                       weight_decay=cfg_opt.weight_decay)
     else:
-        raise NotImplementedError(
-            'Optimizer {} is not yet implemented.'.format(cfg_opt.type))
+        raise NotImplementedError(f'Optimizer {cfg_opt.type} is not yet implemented.')
     return opt

@@ -66,14 +66,13 @@ def get_activations(data_loader, key_real, key_fake,
 
     batch_y = torch.cat(batch_y)
     batch_y = dist_all_gather_tensor(batch_y)
-    if is_master():
-        batch_y = torch.cat(batch_y).cpu().data.numpy()
-        if sample_size is not None:
-            batch_y = batch_y[:sample_size]
-        print(batch_y.shape)
-        return batch_y
-    else:
+    if not is_master():
         return None
+    batch_y = torch.cat(batch_y).cpu().data.numpy()
+    if sample_size is not None:
+        batch_y = batch_y[:sample_size]
+    print(batch_y.shape)
+    return batch_y
 
 
 @torch.no_grad()
@@ -112,10 +111,10 @@ def get_video_activations(data_loader, key_real, key_fake, trainer=None,
         num_videos_to_test = num_sequences
     else:
         num_videos_to_test = min(num_videos_to_test, num_sequences)
-    print('Number of videos used for evaluation: {}'.format(
-        num_videos_to_test))
-    print('Number of frames per video used for evaluation: {}'.format(
-        num_frames_per_video))
+    print(f'Number of videos used for evaluation: {num_videos_to_test}')
+    print(
+        f'Number of frames per video used for evaluation: {num_frames_per_video}'
+    )
 
     world_size = get_world_size()
     if num_videos_to_test < world_size:

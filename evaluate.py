@@ -26,8 +26,7 @@ def parse_args():
     parser.add_argument('--local_rank', type=int, default=0)
     parser.add_argument('--single_gpu', action='store_true')
     parser.add_argument('--num_workers', type=int)
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 def main():
@@ -63,8 +62,7 @@ def main():
                           train_data_loader, val_data_loader)
 
     # Start evaluation.
-    checkpoints = \
-        sorted(glob.glob('{}/*.pt'.format(args.checkpoint_logdir)))
+    checkpoints = sorted(glob.glob(f'{args.checkpoint_logdir}/*.pt'))
     for checkpoint in checkpoints:
         current_epoch, current_iteration = \
             trainer.load_checkpoint(cfg, checkpoint, resume=True)

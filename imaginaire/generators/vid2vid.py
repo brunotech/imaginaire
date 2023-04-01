@@ -189,7 +189,7 @@ class Generator(BaseNetwork):
             # Upsampling layers.
             for i in range(self.num_layers, self.num_downsamples_img, -1):
                 j = min(self.num_downsamples_embed, i)
-                x_img = getattr(self, 'up_' + str(i))(x_img, *cond_maps_now[j])
+                x_img = getattr(self, f'up_{str(i)}')(x_img, *cond_maps_now[j])
                 x_img = self.upsample(x_img)
         else:
             # Not the first frame, will encode the previous frame and feed to
@@ -203,8 +203,7 @@ class Generator(BaseNetwork):
             # Downsampling layers.
             for i in range(self.num_downsamples_img + 1):
                 j = min(self.num_downsamples_embed, i)
-                x_img = getattr(self, 'down_' + str(i))(x_img,
-                                                        *cond_maps_prev[j])
+                x_img = getattr(self, f'down_{str(i)}')(x_img, *cond_maps_prev[j])
                 if i != self.num_downsamples_img:
                     x_img = self.downsample(x_img)
 
@@ -212,15 +211,15 @@ class Generator(BaseNetwork):
             j = min(self.num_downsamples_embed, self.num_downsamples_img + 1)
             for i in range(self.num_res_blocks):
                 cond_maps = cond_maps_prev[j] if i < self.num_res_blocks // 2 \
-                    else cond_maps_now[j]
-                x_img = getattr(self, 'res_' + str(i))(x_img, *cond_maps)
+                        else cond_maps_now[j]
+                x_img = getattr(self, f'res_{str(i)}')(x_img, *cond_maps)
 
         flow = mask = img_warp = None
 
         num_frames_G = self.num_frames_G
         # Whether to warp the previous frame or not.
         warp_prev = self.temporal_initialized and not is_first_frame and \
-            label_prev.shape[1] == num_frames_G - 1
+                label_prev.shape[1] == num_frames_G - 1
         if warp_prev:
             # Estimate flow & mask.
             label_concat = torch.cat([label_prev.view(bs, -1, h, w),
@@ -264,13 +263,13 @@ class Generator(BaseNetwork):
             img_raw = img_final
             img_final = img_final * mask + img_warp * (1 - mask)
 
-        output = dict()
-        output['fake_images'] = img_final
-        output['fake_flow_maps'] = flow
-        output['fake_occlusion_masks'] = mask
-        output['fake_raw_images'] = img_raw
-        output['warped_images'] = img_warp
-        return output
+        return {
+            'fake_images': img_final,
+            'fake_flow_maps': flow,
+            'fake_occlusion_masks': mask,
+            'fake_raw_images': img_raw,
+            'warped_images': img_warp,
+        }
 
     def one_up_conv_layer(self, x, encoded_label, i):
         r"""One residual block layer in the main branch.
@@ -282,7 +281,7 @@ class Generator(BaseNetwork):
         Returns:
            x (4D tensor) : Output feature map.
         """
-        layer = getattr(self, 'up_' + str(i))
+        layer = getattr(self, f'up_{str(i)}')
         x = layer(x, *encoded_label)
         if i != 0:
             x = self.upsample(x)
@@ -366,7 +365,7 @@ class Generator(BaseNetwork):
             num_downs = min(num_downs, self.num_downsamples_embed)
             ch = [min(self.max_num_filters, num_filters * (2 ** num_downs))]
             if (num_downs < self.num_multi_spade_layers):
-                ch = ch * 2
+                ch *= 2
         return ch
 
     def get_cond_maps(self, label, embedder):
@@ -434,16 +433,19 @@ class FlowGenerator(BaseNetwork):
                                          self.get_num_filters(i + 1),
                                          stride=2)]
 
-        # Resnet blocks.
-        res_flow = []
         ch = self.get_num_filters(num_downsamples)
-        for i in range(self.num_res_blocks):
-            res_flow += [
-                Res2dBlock(ch, ch, kernel_size, padding=padding,
-                           weight_norm_type=weight_norm_type,
-                           activation_norm_type=activation_norm_type,
-                           order='CNACN')]
-
+        res_flow = [
+            Res2dBlock(
+                ch,
+                ch,
+                kernel_size,
+                padding=padding,
+                weight_norm_type=weight_norm_type,
+                activation_norm_type=activation_norm_type,
+                order='CNACN',
+            )
+            for _ in range(self.num_res_blocks)
+        ]
         # Upsample.
         up_flow = []
         for i in reversed(range(num_downsamples)):

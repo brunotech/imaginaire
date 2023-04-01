@@ -23,13 +23,12 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Download test data.')
     parser.add_argument('--model_name', required=True,
                         help='Name of the model.')
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 def main():
     args = parse_args()
-    test_data_dir = 'projects/' + args.model_name + '/test_data'
+    test_data_dir = f'projects/{args.model_name}/test_data'
     assert args.model_name in URLS, 'No sample test data available'
     url = URLS[args.model_name]
 
@@ -38,7 +37,7 @@ def main():
     else:
         os.makedirs(test_data_dir, exist_ok=True)
         # Download the compressed dataset.
-        compressed_path = test_data_dir + '.tar.gz'
+        compressed_path = f'{test_data_dir}.tar.gz'
         if not os.path.exists(compressed_path):
             print('Downloading test data to', compressed_path)
             download_file_from_google_drive(url, compressed_path)

@@ -111,9 +111,9 @@ class Augmentor(object):
             elif key == 'max_time_step':
                 self.max_time_step = value
                 assert self.max_time_step >= 1, \
-                    'max_time_step has to be at least 1'
+                        'max_time_step has to be at least 1'
             else:
-                raise ValueError('Unknown augmentation %s' % (key))
+                raise ValueError(f'Unknown augmentation {key}')
         return augs
 
     def _choose_image_key(self, inputs):
@@ -169,11 +169,9 @@ class Augmentor(object):
                 elif interp == Image.BILINEAR:
                     target_type = 'image'
                 else:
-                    raise NotImplementedError(
-                        '%s is not supported yet' % (interp))
+                    raise NotImplementedError(f'{interp} is not supported yet')
             else:
-                raise ValueError(
-                    'Data type: %s is not image or keypoint' % (data_type))
+                raise ValueError(f'Data type: {data_type} is not image or keypoint')
 
             current_data_type_inputs = inputs[data_type]
             if not isinstance(current_data_type_inputs, list):
@@ -442,11 +440,11 @@ def get_paired_input_image_channel_number(data_cfg):
         num_channels (int): Number of input image channels.
     """
     num_channels = 0
-    for ix, data_type in enumerate(data_cfg.input_types):
+    for data_type in data_cfg.input_types:
         for k in data_type:
             if k in data_cfg.input_image:
                 num_channels += data_type[k].num_channels
-                print('Concatenate %s for input.' % data_type)
+                print(f'Concatenate {data_type} for input.')
     print('\tNum. of channels in the input image: %d' % num_channels)
     return num_channels
 
@@ -463,14 +461,14 @@ def get_paired_input_label_channel_number(data_cfg, video=False):
     num_labels = 0
     if not hasattr(data_cfg, 'input_labels'):
         return num_labels
-    for ix, data_type in enumerate(data_cfg.input_types):
+    for data_type in data_cfg.input_types:
         for k in data_type:
             if k in data_cfg.input_labels:
                 num_labels += data_type[k].num_channels
                 if getattr(data_type[k], 'use_dont_care', False):
                     print(data_type[k].use_dont_care)
                     num_labels += 1
-            print('Concatenate %s for input.' % data_type)
+            print(f'Concatenate {data_type} for input.')
 
     if video:
         num_time_steps = getattr(data_cfg.train, 'initial_sequence_length',

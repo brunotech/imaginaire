@@ -29,7 +29,7 @@ class Dataset(BaseDataset):
         # Get initial sequence length.
         if sequence_length is None and not is_inference:
             self.sequence_length = cfg.data.train.initial_sequence_length
-        elif sequence_length is None and is_inference:
+        elif sequence_length is None:
             self.sequence_length = 2
         else:
             self.sequence_length = sequence_length
@@ -133,14 +133,14 @@ class Dataset(BaseDataset):
         self.mapping = length_to_key
         self.epoch_length = num_selected_seq
         if not self.is_inference and self.epoch_length < \
-                self.cfgdata.train.batch_size * 8:
+                    self.cfgdata.train.batch_size * 8:
             self.epoch_length = total_num_of_frames
 
         # At inference time, we want to use all sequences,
         # irrespective of length.
         if self.is_inference:
             sequence_list = []
-            for key, sequences in self.mapping.items():
+            for sequences in self.mapping.values():
                 sequence_list.extend(sequences)
             self.mapping = sequence_list
 
@@ -205,12 +205,9 @@ class Dataset(BaseDataset):
             keys (list): List of full keys.
         """
         assert isinstance(filenames, list), 'Filenames should be a list.'
-        keys = []
         if sequence_name.endswith('___') and sequence_name[-9:-6] == '___':
             sequence_name = sequence_name[:-9]
-        for filename in filenames:
-            keys.append('%s/%s' % (sequence_name, filename))
-        return keys
+        return [f'{sequence_name}/{filename}' for filename in filenames]
 
     def _getitem(self, index, concat=True):
         r"""Gets selected files.
@@ -251,7 +248,7 @@ class Dataset(BaseDataset):
         # Create copy of keypoint data types before post aug.
         kp_data = {}
         for data_type in self.keypoint_data_types:
-            new_key = data_type + '_xy'
+            new_key = f'{data_type}_xy'
             kp_data[new_key] = copy.deepcopy(data[data_type])
 
         # Apply ops post augmentation.

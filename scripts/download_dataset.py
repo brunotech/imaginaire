@@ -14,8 +14,7 @@ def parse_args():
                                  'animal_faces'])
     parser.add_argument('--data_dir', default='./dataset',
                         help='Directory to save all datasets.')
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 def main():
@@ -25,22 +24,22 @@ def main():
     elif args.dataset == 'animal_faces':
         url = '1ftr1xWm0VakGlLUWi7-hdAt9W37luQOA'
     else:
-        raise ValueError('Invalid dataset {}.'.format(args.dataset))
+        raise ValueError(f'Invalid dataset {args.dataset}.')
 
     # Create the dataset directory.
     if not os.path.exists(args.data_dir):
         os.makedirs(args.data_dir)
 
     # Download the compressed dataset.
-    folder_path = os.path.join(args.data_dir, args.dataset + '_raw')
-    compressed_path = folder_path + '.tar.gz'
+    folder_path = os.path.join(args.data_dir, f'{args.dataset}_raw')
+    compressed_path = f'{folder_path}.tar.gz'
     if not os.path.exists(compressed_path) and not os.path.exists(folder_path):
-        print("Downloading the dataset {}.".format(args.dataset))
+        print(f"Downloading the dataset {args.dataset}.")
         download_file_from_google_drive(url, compressed_path)
 
     # Extract the dataset.
     if not os.path.exists(folder_path):
-        print("Extracting the dataset {}.".format(args.dataset))
+        print(f"Extracting the dataset {args.dataset}.")
         with tarfile.open(compressed_path) as tar:
             tar.extractall(folder_path)
 

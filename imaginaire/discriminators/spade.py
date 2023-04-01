@@ -46,7 +46,7 @@ class Discriminator(nn.Module):
         print('\tWeight norm type: %s' % weight_norm_type)
         num_input_channels = image_channels + num_labels
         self.discriminators = nn.ModuleList()
-        for i in range(num_discriminators):
+        for _ in range(num_discriminators):
             net_discriminator = NLayerPatchDiscriminator(
                 kernel_size,
                 num_input_channels,
@@ -109,9 +109,9 @@ class Discriminator(nn.Module):
               - fake_features (list): list of lists of features produced by
                 individual patch discriminators for fake images.
         """
-        output_x = dict()
+        output_x = {}
         output_x['real_outputs'], output_x['real_features'] = \
-            self._single_forward(data['label'], data['images'])
+                self._single_forward(data['label'], data['images'])
         output_x['fake_outputs'], output_x['fake_features'] = \
-            self._single_forward(data['label'], net_G_output['fake_images'])
+                self._single_forward(data['label'], net_G_output['fake_images'])
         return output_x

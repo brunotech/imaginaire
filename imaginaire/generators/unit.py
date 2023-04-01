@@ -27,7 +27,7 @@ class Generator(nn.Module):
         r"""UNIT forward function"""
         images_a = data['images_a']
         images_b = data['images_b']
-        net_G_output = dict()
+        net_G_output = {}
 
         # encode input images into latent code
         content_a = self.autoencoder_a.content_encoder(images_a)
@@ -37,7 +37,7 @@ class Generator(nn.Module):
         if image_recon:
             images_aa = self.autoencoder_a.decoder(content_a)
             images_bb = self.autoencoder_b.decoder(content_b)
-            net_G_output.update(dict(images_aa=images_aa, images_bb=images_bb))
+            net_G_output |= dict(images_aa=images_aa, images_bb=images_bb)
 
         # decode (cross domain)
         images_ba = self.autoencoder_a.decoder(content_b)
@@ -49,13 +49,20 @@ class Generator(nn.Module):
             content_ab = self.autoencoder_b.content_encoder(images_ab)
             images_aba = self.autoencoder_a.decoder(content_ab)
             images_bab = self.autoencoder_b.decoder(content_ba)
-            net_G_output.update(
-                dict(content_ba=content_ba, content_ab=content_ab,
-                     images_aba=images_aba, images_bab=images_bab))
+            net_G_output |= dict(
+                content_ba=content_ba,
+                content_ab=content_ab,
+                images_aba=images_aba,
+                images_bab=images_bab,
+            )
 
         # required outputs
-        net_G_output.update(dict(content_a=content_a, content_b=content_b,
-                                 images_ba=images_ba, images_ab=images_ab))
+        net_G_output |= dict(
+            content_a=content_a,
+            content_b=content_b,
+            images_ba=images_ba,
+            images_ab=images_ab,
+        )
 
         return net_G_output
 
@@ -81,9 +88,7 @@ class Generator(nn.Module):
         content_images = data[input_key]
         content = content_encode(content_images)
         output_images = decode(content)
-        filename = '%s/%s' % (
-            data['key'][input_key]['sequence_name'][0],
-            data['key'][input_key]['filename'][0])
+        filename = f"{data['key'][input_key]['sequence_name'][0]}/{data['key'][input_key]['filename'][0]}"
         filenames = [filename]
         return output_images, filenames
 
@@ -126,8 +131,7 @@ class AutoEncoder(nn.Module):
         super().__init__()
         for key in kwargs:
             if key != 'type':
-                warnings.warn(
-                    "Generator argument '{}' is not used.".format(key))
+                warnings.warn(f"Generator argument '{key}' is not used.")
         self.content_encoder = ContentEncoder(num_downsamples_content,
                                               num_res_blocks,
                                               num_image_channels,
@@ -159,8 +163,7 @@ class AutoEncoder(nn.Module):
             images_recon (Tensor): Reconstructed images.
         """
         content = self.content_encoder(images)
-        images_recon = self.decoder(content)
-        return images_recon
+        return self.decoder(content)
 
 
 class ContentEncoder(nn.Module):
@@ -203,8 +206,7 @@ class ContentEncoder(nn.Module):
                            weight_norm_type=weight_norm_type,
                            nonlinearity=nonlinearity)
         # Whether or not it is safe to use inplace nonlinear activation.
-        if not pre_act or (activation_norm_type != '' and
-                           activation_norm_type != 'none'):
+        if not pre_act or activation_norm_type not in ['', 'none']:
             conv_params['inplace_nonlinearity'] = True
 
         # The order of operations in residual blocks.
@@ -215,7 +217,7 @@ class ContentEncoder(nn.Module):
                               **conv_params)]
 
         # Downsampling blocks.
-        for i in range(num_downsamples):
+        for _ in range(num_downsamples):
             num_filters_prev = num_filters
             num_filters = min(num_filters * 2, max_num_filters)
             model += [Conv2dBlock(num_filters_prev, num_filters, 4, 2, 1,
@@ -292,7 +294,7 @@ class Decoder(nn.Module):
                                         order=order)]
 
         # Convolutional blocks with upsampling.
-        for i in range(num_upsamples):
+        for _ in range(num_upsamples):
             self.decoder += [NearestUpsample(scale_factor=2)]
             self.decoder += [Conv2dBlock(num_filters, num_filters // 2,
                                          5, 1, 2, **conv_params)]

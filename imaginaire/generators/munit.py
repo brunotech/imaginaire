@@ -56,7 +56,7 @@ class Generator(nn.Module):
 
         images_a = data['images_a']
         images_b = data['images_b']
-        net_G_output = dict()
+        net_G_output = {}
 
         # encode input images into content and style code
         content_a, style_a = self.autoencoder_a.encode(images_a)
@@ -66,7 +66,7 @@ class Generator(nn.Module):
         if image_recon:
             images_aa = self.autoencoder_a.decode(content_a, style_a)
             images_bb = self.autoencoder_b.decode(content_b, style_b)
-            net_G_output.update(dict(images_aa=images_aa, images_bb=images_bb))
+            net_G_output |= dict(images_aa=images_aa, images_bb=images_bb)
 
         # decode (cross domain)
         if random_style:  # use randomly sampled style code
@@ -82,29 +82,41 @@ class Generator(nn.Module):
         if latent_recon or cycle_recon:
             content_ba, style_ba = self.autoencoder_a.encode(images_ba)
             content_ab, style_ab = self.autoencoder_b.encode(images_ab)
-            net_G_output.update(dict(content_ba=content_ba, style_ba=style_ba,
-                                     content_ab=content_ab, style_ab=style_ab))
+            net_G_output |= dict(
+                content_ba=content_ba,
+                style_ba=style_ba,
+                content_ab=content_ab,
+                style_ab=style_ab,
+            )
 
         # encode reconstructed images into content and style code
         if image_recon and within_latent_recon:
             content_aa, style_aa = self.autoencoder_a.encode(images_aa)
             content_bb, style_bb = self.autoencoder_b.encode(images_bb)
-            net_G_output.update(dict(content_aa=content_aa, style_aa=style_aa,
-                                     content_bb=content_bb, style_bb=style_bb))
+            net_G_output |= dict(
+                content_aa=content_aa,
+                style_aa=style_aa,
+                content_bb=content_bb,
+                style_bb=style_bb,
+            )
 
         # cycle reconstruction
         if cycle_recon:
             images_aba = self.autoencoder_a.decode(content_ab, style_a)
             images_bab = self.autoencoder_b.decode(content_ba, style_b)
-            net_G_output.update(
-                dict(images_aba=images_aba, images_bab=images_bab))
+            net_G_output |= dict(images_aba=images_aba, images_bab=images_bab)
 
         # required outputs
-        net_G_output.update(dict(content_a=content_a, content_b=content_b,
-                                 style_a=style_a, style_b=style_b,
-                                 style_a_rand=style_a_rand,
-                                 style_b_rand=style_b_rand,
-                                 images_ba=images_ba, images_ab=images_ab))
+        net_G_output |= dict(
+            content_a=content_a,
+            content_b=content_b,
+            style_a=style_a,
+            style_b=style_b,
+            style_a_rand=style_a_rand,
+            style_b_rand=style_b_rand,
+            images_ba=images_ba,
+            images_ab=images_ab,
+        )
 
         return net_G_output
 
@@ -141,16 +153,18 @@ class Generator(nn.Module):
             file_names = data['key'][input_key]['filename']
         else:
             style_key = 'images_b' if a2b else 'images_a'
-            assert style_key in data.keys(), \
-                "{} must be provided when 'random_style' " \
-                "is set to False".format(style_key)
+            assert (
+                style_key in data.keys()
+            ), f"{style_key} must be provided when 'random_style' is set to False"
             style_images = data[style_key]
             style = style_encode(style_images)
-            file_names = \
-                [content_name + '_style_' + style_name
-                 for content_name, style_name in
-                    zip(data['key'][input_key]['filename'],
-                        data['key'][style_key]['filename'])]
+            file_names = [
+                f'{content_name}_style_{style_name}'
+                for content_name, style_name in zip(
+                    data['key'][input_key]['filename'],
+                    data['key'][style_key]['filename'],
+                )
+            ]
 
         output_images = decode(content, style)
         return output_images, file_names
@@ -210,8 +224,7 @@ class AutoEncoder(nn.Module):
         super().__init__()
         for key in kwargs:
             if key != 'type':
-                warnings.warn(
-                    "Generator argument '{}' is not used.".format(key))
+                warnings.warn(f"Generator argument '{key}' is not used.")
         self.style_encoder = StyleEncoder(num_downsamples_style,
                                           num_image_channels,
                                           num_filters,
@@ -260,8 +273,7 @@ class AutoEncoder(nn.Module):
             images_recon (Tensor): Reconstructed images.
         """
         content, style = self.encode(images)
-        images_recon = self.decode(content, style)
-        return images_recon
+        return self.decode(content, style)
 
     def encode(self, images):
         r"""Encode an image to content and style code.
@@ -287,8 +299,7 @@ class AutoEncoder(nn.Module):
             images (Tensor): Output images.
         """
         style = self.mlp(style)
-        images = self.decoder(content, style)
-        return images
+        return self.decoder(content, style)
 
 
 class StyleEncoder(nn.Module):
@@ -318,11 +329,11 @@ class StyleEncoder(nn.Module):
         model = []
         model += [Conv2dBlock(num_image_channels, num_filters, 7, 1, 3,
                               **conv_params)]
-        for i in range(2):
+        for _ in range(2):
             model += [Conv2dBlock(num_filters, 2 * num_filters, 4, 2, 1,
                                   **conv_params)]
             num_filters *= 2
-        for i in range(num_downsamples - 2):
+        for _ in range(num_downsamples - 2):
             model += [Conv2dBlock(num_filters, num_filters, 4, 2, 1,
                                   **conv_params)]
         model += [nn.AdaptiveAvgPool2d(1)]
@@ -403,7 +414,7 @@ class Decoder(nn.Module):
                                         order=order)]
 
         # Convolutional blocks with upsampling.
-        for i in range(num_upsamples):
+        for _ in range(num_upsamples):
             self.decoder += [NearestUpsample(scale_factor=2)]
             self.decoder += [Conv2dBlock(num_filters, num_filters // 2,
                                          5, 1, 2, **conv_params)]
@@ -420,10 +431,7 @@ class Decoder(nn.Module):
             style (tensor): Style embedding of the style image.
         """
         for block in self.decoder:
-            if getattr(block, 'conditional', False):
-                x = block(x, style)
-            else:
-                x = block(x)
+            x = block(x, style) if getattr(block, 'conditional', False) else block(x)
         return x
 
 
@@ -447,7 +455,7 @@ class MLP(nn.Module):
         model += [LinearBlock(input_dim, latent_dim,
                               activation_norm_type=norm,
                               nonlinearity=nonlinearity)]
-        for i in range(num_layers - 2):
+        for _ in range(num_layers - 2):
             model += [LinearBlock(latent_dim, latent_dim,
                                   activation_norm_type=norm,
                                   nonlinearity=nonlinearity)]

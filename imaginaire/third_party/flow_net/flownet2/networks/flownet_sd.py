@@ -115,7 +115,4 @@ class FlowNetSD(nn.Module):
         out_interconv2 = self.inter_conv2(concat2)
         flow2 = self.predict_flow2(out_interconv2)
 
-        if self.training:
-            return flow2, flow3, flow4, flow5, flow6
-        else:
-            return flow2,
+        return (flow2, flow3, flow4, flow5, flow6) if self.training else (flow2, )

@@ -18,7 +18,6 @@ class Generator(nn.Module):
     def __init__(self, gen_cfg, data_cfg):
         super(Generator, self).__init__()
         self.dummy_layer = LinearBlock(1, 1)
-        pass
 
     def forward(self, data):
         r"""Dummy Generator forward.

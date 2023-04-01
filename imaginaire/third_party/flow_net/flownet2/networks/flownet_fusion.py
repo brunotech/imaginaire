@@ -77,6 +77,4 @@ class FlowNetFusion(nn.Module):
 
         concat0 = torch.cat((out_conv0, out_deconv0, flow1_up), 1)
         out_interconv0 = self.inter_conv0(concat0)
-        flow0 = self.predict_flow0(out_interconv0)
-
-        return flow0
+        return self.predict_flow0(out_interconv0)

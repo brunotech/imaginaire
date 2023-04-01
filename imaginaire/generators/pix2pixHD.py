@@ -32,7 +32,7 @@ class Generator(nn.Module):
         # for generating high resolution images.
         local_gen_cfg = gen_cfg.local_enhancer
         self.num_local_enhancers = num_local_enhancers = \
-            getattr(local_gen_cfg, 'num_enhancers', 1)
+                getattr(local_gen_cfg, 'num_enhancers', 1)
         # By default, pix2pixHD using instance normalization.
         activation_norm_type = getattr(gen_cfg, 'activation_norm_type',
                                        'instance')
@@ -55,11 +55,7 @@ class Generator(nn.Module):
         # Know what is the number of available segmentation labels.
         num_input_channels = get_paired_input_label_channel_number(data_cfg)
         self.concat_features = False
-        # Check whether label input contains specific type of data (e.g.
-        # instance_maps).
-        self.contain_instance_map = False
-        if data_cfg.input_labels[-1] == 'instance_maps':
-            self.contain_instance_map = True
+        self.contain_instance_map = data_cfg.input_labels[-1] == 'instance_maps'
         # The feature encoder is only useful when the instance map is provided.
         if hasattr(gen_cfg, 'enc') and self.contain_instance_map:
             num_feat_channels = getattr(gen_cfg.enc, 'num_feat_channels', 0)
@@ -108,7 +104,7 @@ class Generator(nn.Module):
         """
         label = data['label']
 
-        output = dict()
+        output = {}
         if self.concat_features:
             features = self.encoder(data['images'], data['instance_maps'])
             label = torch.cat([label, features], dim=1)
@@ -116,9 +112,10 @@ class Generator(nn.Module):
 
         # Create input pyramid.
         input_downsampled = [label]
-        for i in range(self.num_local_enhancers):
-            input_downsampled.append(self.downsample(input_downsampled[-1]))
-
+        input_downsampled.extend(
+            self.downsample(input_downsampled[-1])
+            for _ in range(self.num_local_enhancers)
+        )
         # Output at coarsest level.
         x = self.global_model(input_downsampled[-1])
 
@@ -185,17 +182,16 @@ class LocalEnhancer(nn.Module):
         num_img_channels = get_paired_input_image_channel_number(data_cfg)
         # Downsample.
         model_downsample = \
-            [base_conv_block(num_input_channels, num_filters, 7, padding=3),
+                [base_conv_block(num_input_channels, num_filters, 7, padding=3),
              base_conv_block(num_filters, num_filters * 2, 3, stride=2,
                              padding=1)]
-        # Residual blocks.
-        model_upsample = []
-        for i in range(num_res_blocks):
-            model_upsample += [base_res_block(num_filters * 2, num_filters * 2,
-                                              3, padding=1)]
+        model_upsample = [
+            base_res_block(num_filters * 2, num_filters * 2, 3, padding=1)
+            for _ in range(num_res_blocks)
+        ]
         # Upsample.
         model_upsample += \
-            [NearestUpsample(scale_factor=2),
+                [NearestUpsample(scale_factor=2),
              base_conv_block(num_filters * 2, num_filters, 3, padding=1)]
 
         # Final convolution.
@@ -216,9 +212,9 @@ class LocalEnhancer(nn.Module):
         Returns:
             output (4D tensor) : Refined output.
         """
-        output = self.model_upsample(self.model_downsample(input_fine)
-                                     + output_coarse)
-        return output
+        return self.model_upsample(
+            self.model_downsample(input_fine) + output_coarse
+        )
 
 
 class GlobalGenerator(nn.Module):

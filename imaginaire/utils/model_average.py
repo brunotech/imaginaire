@@ -26,10 +26,8 @@ def calibrate_batch_norm_momentum(m):
     Args:
         m: Pytorch module
     """
-    if hasattr(m, 'reset_running_stats'):
-        # if m._get_name() == 'SyncBatchNorm':
-        if 'BatchNorm' in m._get_name():
-            m.momentum = 1.0 / float(m.num_batches_tracked + 1)
+    if hasattr(m, 'reset_running_stats') and 'BatchNorm' in m._get_name():
+        m.momentum = 1.0 / float(m.num_batches_tracked + 1)
 
 
 class ModelAverage(nn.Module):
@@ -87,10 +85,7 @@ class ModelAverage(nn.Module):
     def update_average(self):
         r"""Update the moving average."""
         self.num_updates_tracked += 1
-        if self.num_updates_tracked <= self.start_iteration:
-            beta = 0.
-        else:
-            beta = self.beta
+        beta = 0. if self.num_updates_tracked <= self.start_iteration else self.beta
         if self.remove_sn:
             source_dict = self.module.state_dict()
             source_keys = source_dict.keys()
@@ -99,12 +94,12 @@ class ModelAverage(nn.Module):
             with torch.no_grad():
                 for key in target_keys:
                     # print(key)
-                    if key.endswith('weight') and key + '_orig' in source_keys:
+                    if key.endswith('weight') and f'{key}_orig' in source_keys:
                         # print(key)
                         data = self.sn_compute_weight(
-                            source_dict[key + '_orig'].data,
-                            source_dict[key + '_u'].data,
-                            source_dict[key + '_v'].data,
+                            source_dict[f'{key}_orig'].data,
+                            source_dict[f'{key}_u'].data,
+                            source_dict[f'{key}_v'].data,
                         )
                         target_dict[key].data.copy_(
                             target_dict[key].data * beta +

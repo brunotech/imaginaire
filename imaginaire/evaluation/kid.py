@@ -75,8 +75,7 @@ def compute_kid(kid_path, data_loader, net_G,
                                                 num_subsets,
                                                 subset_size,
                                                 ret_var=True)
-        kid = mmd.mean()
-        return kid
+        return mmd.mean()
 
 
 def compute_kid_data(kid_path, data_loader_a, data_loader_b,
@@ -100,8 +99,7 @@ def compute_kid_data(kid_path, data_loader_a, data_loader_b,
     if sample_size is None:
         sample_size = min(len(data_loader_a.dataset),
                           len(data_loader_b.dataset))
-    print('Computing KID using {} images from both distributions.'.
-          format(sample_size))
+    print(f'Computing KID using {sample_size} images from both distributions.')
     with torch.no_grad():
         path_a = os.path.join(os.path.dirname(kid_path),
                               'activations_a.npz')
@@ -121,8 +119,7 @@ def compute_kid_data(kid_path, data_loader_a, data_loader_b,
                                                     num_subsets,
                                                     subset_size,
                                                     ret_var=True)
-            kid = mmd.mean()
-            return kid
+            return mmd.mean()
         else:
             return None
 
@@ -150,13 +147,13 @@ def load_or_compute_activations(act_path, data_loader, key_real, key_fake,
     if is_video:
         raise NotImplementedError("Video KID is not currently supported.")
     if act_path is not None and os.path.exists(act_path):
-        print('Load Inception activations from {}'.format(act_path))
+        print(f'Load Inception activations from {act_path}')
         act = np.load(act_path)
     else:
         act = get_activations(data_loader, key_real, key_fake,
                               generator, sample_size, preprocess)
         if act_path is not None and is_master():
-            print('Save Inception activations to {}'.format(act_path))
+            print(f'Save Inception activations to {act_path}')
             np.save(act_path, act)
     return act
 
@@ -187,13 +184,14 @@ def polynomial_mmd_averages(codes_g, codes_r, n_subsets, subset_size,
 
     if subset_size is None:
         subset_size = min(len(codes_r), len(codes_r))
-        print("Subset size not provided, "
-              "setting it to the data size ({}).".format(subset_size))
+        print(
+            f"Subset size not provided, setting it to the data size ({subset_size})."
+        )
     if subset_size > len(codes_g) or subset_size > len(codes_r):
         subset_size = min(len(codes_r), len(codes_r))
         warnings.warn(
-            "Subset size is large than the actual data size, "
-            "setting it to the data size ({}).".format(subset_size))
+            f"Subset size is large than the actual data size, setting it to the data size ({subset_size})."
+        )
 
     for i in range(n_subsets):
         g = codes_g[choice(len(codes_g), subset_size, replace=False)]

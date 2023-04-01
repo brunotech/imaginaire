@@ -148,13 +148,13 @@ class Generator(Vid2VidGenerator):
         # Whether to warp the previous frame or not.
         flow = mask = img_warp = None
         warp_prev = self.temporal_initialized and not is_first_frame and \
-            label_prev.shape[1] == self.num_frames_G - 1
+                label_prev.shape[1] == self.num_frames_G - 1
 
         # Get guidance images and masks.
         guidance_images_and_masks, point_info = None, None
         if unprojection is not None:
             guidance_images_and_masks, point_info = \
-                self.get_guidance_images_and_masks(unprojection)
+                    self.get_guidance_images_and_masks(unprojection)
 
         # Get SPADE conditional maps by embedding current label input.
         cond_maps_now = self.get_cond_maps(label, self.label_embedding)
@@ -195,8 +195,7 @@ class Generator(Vid2VidGenerator):
                 # Upsampling layers.
                 for i in range(self.num_layers, self.num_downsamples_img, -1):
                     j = min(self.num_downsamples_embed, i)
-                    x_img = getattr(self, 'up_' + str(i)
-                                    )(x_img, *cond_maps_now[j])
+                    x_img = getattr(self, f'up_{str(i)}')(x_img, *cond_maps_now[j])
                     x_img = self.upsample(x_img)
             else:
                 # Not the first frame, will encode the previous frame and feed
@@ -210,8 +209,7 @@ class Generator(Vid2VidGenerator):
                 # Downsampling layers.
                 for i in range(self.num_downsamples_img + 1):
                     j = min(self.num_downsamples_embed, i)
-                    x_img = getattr(self, 'down_' + str(i))(x_img,
-                                                            *cond_maps_prev[j])
+                    x_img = getattr(self, f'down_{str(i)}')(x_img, *cond_maps_prev[j])
                     if i != self.num_downsamples_img:
                         x_img = self.downsample(x_img)
 
@@ -220,8 +218,8 @@ class Generator(Vid2VidGenerator):
                         self.num_downsamples_img + 1)
                 for i in range(self.num_res_blocks):
                     cond_maps = cond_maps_prev[j] if \
-                        i < self.num_res_blocks // 2 else cond_maps_now[j]
-                    x_img = getattr(self, 'res_' + str(i))(x_img, *cond_maps)
+                            i < self.num_res_blocks // 2 else cond_maps_now[j]
+                    x_img = getattr(self, f'res_{str(i)}')(x_img, *cond_maps)
 
             # Optical flow warped image features.
             if warp_prev:
@@ -254,18 +252,16 @@ class Generator(Vid2VidGenerator):
                         x_raw_img = self.one_up_conv_layer(
                             x_raw_img, cond_maps, i)
 
-                # Add flow and guidance features.
-                if warp_prev:
-                    if i < self.num_multi_spade_layers:
+                if i < self.num_multi_spade_layers:
+                    if warp_prev:
                         # Add flow.
                         cond_maps += cond_maps_img[j]
                         # Add guidance.
                         if guidance_images_and_masks is not None:
                             cond_maps += [guidance_images_and_masks]
-                    elif not self.guidance_only_with_flow:
-                        # Add guidance if it is to be applied to every layer.
-                        if guidance_images_and_masks is not None:
-                            cond_maps += [guidance_images_and_masks]
+                elif not self.guidance_only_with_flow:
+                    if warp_prev and guidance_images_and_masks is not None:
+                        cond_maps += [guidance_images_and_masks]
 
                 x_img = self.one_up_conv_layer(x_img, cond_maps, i)
 
@@ -276,7 +272,7 @@ class Generator(Vid2VidGenerator):
         # Update the point cloud color dict of renderer.
         self.renderer_update_point_cloud(img_final, point_info)
 
-        output = dict()
+        output = {}
         output['fake_images'] = img_final
         output['fake_flow_maps'] = flow
         output['fake_occlusion_masks'] = mask
@@ -300,7 +296,7 @@ class Generator(Vid2VidGenerator):
             num_downs = min(num_downs, self.num_downsamples_embed)
             ch = [min(self.max_num_filters, num_filters * (2 ** num_downs))]
             if (num_downs < self.num_multi_spade_layers):
-                ch = ch * 2
+                ch *= 2
                 # Also add guidance (RGB + mask = 4 channels, or 3 if partial).
                 if self.guidance_partial_conv:
                     ch.append(3)
@@ -322,7 +318,7 @@ class Generator(Vid2VidGenerator):
         """
         partial = [False]
         if (num_downs < self.num_multi_spade_layers):
-            partial = partial * 2
+            partial *= 2
             # Also add guidance (RGB + mask = 4 channels, or 3 if partial).
             if self.guidance_partial_conv:
                 partial.append(True)

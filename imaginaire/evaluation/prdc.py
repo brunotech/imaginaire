@@ -28,9 +28,9 @@ def compute_pairwise_distance(data_x, data_y=None):
     """
     if data_y is None:
         data_y = data_x
-    dists = sklearn.metrics.pairwise_distances(
-        data_x, data_y, metric='euclidean', n_jobs=8)
-    return dists
+    return sklearn.metrics.pairwise_distances(
+        data_x, data_y, metric='euclidean', n_jobs=8
+    )
 
 
 def get_kth_value(unsorted, k, axis=-1):
@@ -44,8 +44,7 @@ def get_kth_value(unsorted, k, axis=-1):
     """
     indices = np.argpartition(unsorted, k, axis=axis)[..., :k]
     k_smallests = np.take_along_axis(unsorted, indices, axis=axis)
-    kth_values = k_smallests.max(axis=axis)
-    return kth_values
+    return k_smallests.max(axis=axis)
 
 
 def compute_nearest_neighbour_distances(input_features, nearest_k):
@@ -58,8 +57,7 @@ def compute_nearest_neighbour_distances(input_features, nearest_k):
         Distances to kth nearest neighbours.
     """
     distances = compute_pairwise_distance(input_features)
-    radii = get_kth_value(distances, k=nearest_k + 1, axis=-1)
-    return radii
+    return get_kth_value(distances, k=nearest_k + 1, axis=-1)
 
 
 def get_prdc(real_features, fake_features, nearest_k):
@@ -74,8 +72,7 @@ def get_prdc(real_features, fake_features, nearest_k):
         dict of precision, recall, density, and coverage.
     """
 
-    print('Num real: {} Num fake: {}'
-          .format(real_features.shape[0], fake_features.shape[0]))
+    print(f'Num real: {real_features.shape[0]} Num fake: {fake_features.shape[0]}')
 
     real_nearest_neighbour_distances = compute_nearest_neighbour_distances(
         real_features, nearest_k)

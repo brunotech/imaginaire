@@ -74,13 +74,12 @@ class Trainer(vid2vidTrainer):
         Args:
             data (dict): Training data at the current iteration.
         """
-        vis_images = [
+        return [
             tensor2im(data['few_shot_images'][:, 0]),
             self.visualize_label(data['label'][:, -1]),
             tensor2im(data['images'][:, -1]),
             tensor2im(self.net_G_output['fake_images']),
         ]
-        return vis_images
 
     def get_data_t(self, data, net_G_output, data_prev, t):
         r"""Get data at current time frame given the sequence of data.
@@ -104,16 +103,17 @@ class Trainer(vid2vidTrainer):
         else:
             prev_labels = prev_images = None
 
-        data_t = dict()
-        data_t['label'] = label
-        data_t['image'] = image
-        data_t['ref_labels'] = data['few_shot_label'] if 'few_shot_label' \
-                                                         in data else None
-        data_t['ref_images'] = data['few_shot_images']
-        data_t['prev_labels'] = prev_labels
-        data_t['prev_images'] = prev_images
-        data_t['real_prev_image'] = data['images'][:, t - 1] if t > 0 else None
-
+        data_t = {
+            'label': label,
+            'image': image,
+            'ref_labels': data['few_shot_label']
+            if 'few_shot_label' in data
+            else None,
+            'ref_images': data['few_shot_images'],
+            'prev_labels': prev_labels,
+            'prev_images': prev_images,
+            'real_prev_image': data['images'][:, t - 1] if t > 0 else None,
+        }
         if 'landmarks_xy' in data:
             data_t['landmarks_xy'] = data['landmarks_xy'][:, t]
             data_t['ref_landmarks_xy'] = data['few_shot_landmarks_xy']
@@ -169,7 +169,7 @@ class Trainer(vid2vidTrainer):
             video.append(output)
 
         # Save output as mp4.
-        imageio.mimsave(video_path + '.mp4', video, fps=15)
+        imageio.mimsave(f'{video_path}.mp4', video, fps=15)
 
     def save_image(self, path, data):
         r"""Save the output images to path.
@@ -265,11 +265,11 @@ class Trainer(vid2vidTrainer):
         r"""Finetune the model for a few iterations on the inference data."""
         # Get the list of params to finetune.
         self.net_G, self.net_D, self.opt_G, self.opt_D = \
-            get_optimizer_with_params(self.cfg, self.net_G, self.net_D,
+                get_optimizer_with_params(self.cfg, self.net_G, self.net_D,
                                       param_names_start_with=[
                                           'weight_generator.fc', 'conv_img',
                                           'up'])
-        data_finetune = {k: v for k, v in data.items()}
+        data_finetune = dict(data.items())
         ref_labels = data_finetune['few_shot_label']
         ref_images = data_finetune['few_shot_images']
 

@@ -49,15 +49,15 @@ def _get_data_loader(cfg, dataset, batch_size, not_distributed=False,
     else:
         sampler = torch.utils.data.distributed.DistributedSampler(dataset)
     num_workers = getattr(cfg.data, 'num_workers', 8)
-    data_loader = torch.utils.data.DataLoader(
+    return torch.utils.data.DataLoader(
         dataset,
         batch_size=batch_size,
         shuffle=shuffle and (sampler is None),
         sampler=sampler,
         pin_memory=True,
         num_workers=num_workers,
-        drop_last=getattr(cfg, 'drop_last', True))
-    return data_loader
+        drop_last=getattr(cfg, 'drop_last', True),
+    )
 
 
 def get_train_and_val_dataloader(cfg):
@@ -93,8 +93,7 @@ def _get_test_dataset_object(cfg):
         (obj): PyTorch dataset object.
     """
     dataset_module = importlib.import_module(cfg.test_data.type)
-    test_dataset = dataset_module.Dataset(cfg, is_inference=True, is_test=True)
-    return test_dataset
+    return dataset_module.Dataset(cfg, is_inference=True, is_test=True)
 
 
 def get_test_dataloader(cfg):
@@ -110,7 +109,10 @@ def get_test_dataloader(cfg):
     not_distributed = getattr(
         cfg.test_data, 'val_data_loader_not_distributed', False)
     not_distributed = 'video' in cfg.test_data.type or not_distributed
-    test_data_loader = _get_data_loader(
-        cfg, test_dataset, cfg.test_data.test.batch_size, not_distributed,
-        shuffle=False)
-    return test_data_loader
+    return _get_data_loader(
+        cfg,
+        test_dataset,
+        cfg.test_data.test.batch_size,
+        not_distributed,
+        shuffle=False,
+    )

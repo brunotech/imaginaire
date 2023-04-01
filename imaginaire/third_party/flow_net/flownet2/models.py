@@ -167,8 +167,7 @@ class FlowNet2(nn.Module):
         concat3 = torch.cat((x[:, :3, :, :], flownetsd_flow, flownets2_flow,
                              norm_flownetsd_flow, norm_flownets2_flow,
                              diff_flownetsd_img1, diff_flownets2_img1), dim=1)
-        flownetfusion_flow = self.flownetfusion(concat3)
-        return flownetfusion_flow
+        return self.flownetfusion(concat3)
 
 
 class FlowNet2C(flownet_c.FlowNetC):
@@ -375,8 +374,7 @@ class FlowNet2CS(nn.Module):
             dim=1)
         # flownets1
         flownets1_flow2 = self.flownets_1(concat1)[0]
-        flownets1_flow = self.upsample2(flownets1_flow2 * self.div_flow)
-        return flownets1_flow
+        return self.upsample2(flownets1_flow2 * self.div_flow)
 
 
 class FlowNet2CSS(nn.Module):
@@ -470,5 +468,4 @@ class FlowNet2CSS(nn.Module):
             dim=1)
         # flownets2
         flownets2_flow2 = self.flownets_2(concat2)[0]
-        flownets2_flow = self.upsample3(flownets2_flow2 * self.div_flow)
-        return flownets2_flow
+        return self.upsample3(flownets2_flow2 * self.div_flow)

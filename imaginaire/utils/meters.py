@@ -38,7 +38,7 @@ def get_weight_stats(mod, cfg, loss_id):
          loss_id: Needed when using AMP.
     """
     loss_scale = 1.0
-    if cfg.trainer.amp == 'O1' or cfg.trainer.amp == 'O2':
+    if cfg.trainer.amp in ['O1', 'O2']:
         # AMP rescales the gradient so we have to undo it.
         loss_scale = amp._amp_state.loss_scalers[loss_id].loss_scale()
     if mod.weight_orig.grad is not None:
@@ -137,7 +137,7 @@ class Meter(object):
             step (int): Epoch or iteration number.
         """
         if not all(math.isfinite(x) for x in self.values):
-            print("meter {} contained a nan or inf.".format(self.name))
+            print(f"meter {self.name} contained a nan or inf.")
         filtered_values = list(filter(lambda x: math.isfinite(x), self.values))
         if float(len(filtered_values)) != 0:
             value = float(sum(filtered_values)) / float(len(filtered_values))

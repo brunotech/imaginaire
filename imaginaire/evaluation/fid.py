@@ -53,9 +53,9 @@ def compute_fid(fid_path, data_loader, net_G,
                                                     is_video, few_shot_video)
 
     if is_master():
-        fid = calculate_frechet_distance(
-            real_mean, real_cov, fake_mean, fake_cov)
-        return fid
+        return calculate_frechet_distance(
+            real_mean, real_cov, fake_mean, fake_cov
+        )
 
 
 def compute_fid_data(fid_path, data_loader_a, data_loader_b,
@@ -79,8 +79,7 @@ def compute_fid_data(fid_path, data_loader_a, data_loader_b,
     if sample_size is None:
         sample_size = min(len(data_loader_a.dataset),
                           len(data_loader_b.dataset))
-    print('Computing FID using {} images from both distributions.'.
-          format(sample_size))
+    print(f'Computing FID using {sample_size} images from both distributions.')
     with torch.no_grad():
         path_a = os.path.join(os.path.dirname(fid_path),
                               'mean_cov_a.npz')
@@ -95,8 +94,7 @@ def compute_fid_data(fid_path, data_loader_a, data_loader_b,
                                               sample_size=sample_size,
                                               is_video=is_video)
     if is_master():
-        fid = calculate_frechet_distance(mean_b, cov_b, mean_a, cov_a)
-        return fid
+        return calculate_frechet_distance(mean_b, cov_b, mean_a, cov_a)
 
 
 def load_or_compute_stats(fid_path, data_loader, key_real, key_fake,
@@ -122,12 +120,12 @@ def load_or_compute_stats(fid_path, data_loader, key_real, key_fake,
           - cov (tensor): Covariance matrix.
     """
     if os.path.exists(fid_path):
-        print('Load FID mean and cov from {}'.format(fid_path))
+        print(f'Load FID mean and cov from {fid_path}')
         npz_file = np.load(fid_path)
         mean = npz_file['mean']
         cov = npz_file['cov']
     else:
-        print('Get FID mean and cov and save to {}'.format(fid_path))
+        print(f'Get FID mean and cov and save to {fid_path}')
         mean, cov = get_inception_mean_cov(data_loader, key_real, key_fake,
                                            generator, sample_size, preprocess,
                                            is_video, few_shot_video)
@@ -218,8 +216,8 @@ def calculate_frechet_distance(mu1, sigma1, mu2, sigma2, eps=1e-6):
     if np.iscomplexobj(covmean):
         if not np.allclose(np.diagonal(covmean).imag, 0, atol=1e-3):
             m = np.max(np.abs(covmean.imag))
-            print('Imaginary component {}'.format(m))
-            # raise ValueError('Imaginary component {}'.format(m))
+            print(f'Imaginary component {m}')
+                    # raise ValueError('Imaginary component {}'.format(m))
         covmean = covmean.real
     tr_covmean = np.trace(covmean)
     return (diff.dot(diff) + np.trace(sigma1) + np.trace(

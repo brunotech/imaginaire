@@ -36,9 +36,7 @@ class Generator(nn.Module):
         images_trans = self.generator.decode(content_a, style_b)
         images_recon = self.generator.decode(content_a, style_a)
 
-        net_G_output = dict(images_trans=images_trans,
-                            images_recon=images_recon)
-        return net_G_output
+        return dict(images_trans=images_trans, images_recon=images_recon)
 
     def inference(self, data, keep_original_size=True):
         r"""COCO-FUNIT inference.
@@ -139,8 +137,7 @@ class FUNITTranslator(nn.Module):
         """
         # reconstruct an image
         content, style = self.encode(images)
-        images_recon = self.decode(content, style)
-        return images_recon
+        return self.decode(content, style)
 
     def encode(self, images):
         r"""Encoder images to get their content and style codes.
@@ -160,8 +157,7 @@ class FUNITTranslator(nn.Module):
             style (tensor): Style code tensor.
         """
         style = self.mlp(style)
-        images = self.decoder(content, style)
-        return images
+        return self.decoder(content, style)
 
 
 class Decoder(nn.Module):
@@ -235,10 +231,7 @@ class Decoder(nn.Module):
             style (tensor): Style embedding of the style image.
         """
         for block in self.decoder:
-            if getattr(block, 'conditional', False):
-                x = block(x, style)
-            else:
-                x = block(x)
+            x = block(x, style) if getattr(block, 'conditional', False) else block(x)
         return x
 
 
@@ -277,11 +270,11 @@ class StyleEncoder(nn.Module):
         model = []
         model += [Conv2dBlock(image_channels, num_filters, 7, 1, 3,
                               **conv_params)]
-        for i in range(2):
+        for _ in range(2):
             model += [Conv2dBlock(num_filters, 2 * num_filters, 4, 2, 1,
                                   **conv_params)]
             num_filters *= 2
-        for i in range(num_downsamples - 2):
+        for _ in range(num_downsamples - 2):
             model += [Conv2dBlock(num_filters, num_filters, 4, 2, 1,
                                   **conv_params)]
         model += [nn.AdaptiveAvgPool2d(1)]
@@ -336,7 +329,7 @@ class ContentEncoder(nn.Module):
         model += [Conv2dBlock(image_channels, num_filters, 7, 1, 3,
                               **conv_params)]
         dims = num_filters
-        for i in range(num_downsamples):
+        for _ in range(num_downsamples):
             model += [Conv2dBlock(dims, dims * 2, 4, 2, 1, **conv_params)]
             dims *= 2
 
@@ -380,7 +373,7 @@ class MLP(nn.Module):
                               activation_norm_type=activation_norm_type,
                               nonlinearity=nonlinearity)]
         # changed from num_layers - 2 to num_layers - 3.
-        for i in range(num_layers - 3):
+        for _ in range(num_layers - 3):
             model += [LinearBlock(latent_dim, latent_dim,
                                   activation_norm_type=activation_norm_type,
                                   nonlinearity=nonlinearity)]

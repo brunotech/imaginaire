@@ -33,19 +33,22 @@ class Discriminator(nn.Module):
         source_labels = data['labels_content']
         target_labels = data['labels_style']
         fake_out_trans, fake_features_trans = \
-            self.model(net_G_output['images_trans'], target_labels)
+                self.model(net_G_output['images_trans'], target_labels)
         output = dict(fake_out_trans=fake_out_trans,
                       fake_features_trans=fake_features_trans)
 
         real_out_style, real_features_style = \
-            self.model(data['images_style'], target_labels)
-        output.update(dict(real_out_style=real_out_style,
-                           real_features_style=real_features_style))
+                self.model(data['images_style'], target_labels)
+        output |= dict(
+            real_out_style=real_out_style, real_features_style=real_features_style
+        )
         if recon:
             fake_out_recon, fake_features_recon = \
-                self.model(net_G_output['images_recon'], source_labels)
-            output.update(dict(fake_out_recon=fake_out_recon,
-                               fake_features_recon=fake_features_recon))
+                    self.model(net_G_output['images_recon'], source_labels)
+            output |= dict(
+                fake_out_recon=fake_out_recon,
+                fake_features_recon=fake_features_recon,
+            )
         return output
 
 
@@ -64,8 +67,7 @@ class ResDiscriminator(nn.Module):
         super().__init__()
         for key in kwargs:
             if key != 'type':
-                warnings.warn(
-                    "Discriminator argument {} is not used".format(key))
+                warnings.warn(f"Discriminator argument {key} is not used")
 
         conv_params = dict(padding_mode=padding_mode,
                            activation_norm_type='none',

@@ -64,16 +64,16 @@ class Dataset(BaseDataset):
         mapping = []
         for lmdb_idx, sequence_list in enumerate(self.sequence_lists):
             for sequence_name, filenames in sequence_list.items():
-                for filename in filenames:
-                    # This file is corrupt.
-                    if filename == 'z-KziTO_5so_0019_start0_end85_h596_w596':
-                        continue
-                    mapping.append({
+                mapping.extend(
+                    {
                         'lmdb_root': self.lmdb_roots[lmdb_idx],
                         'lmdb_idx': lmdb_idx,
                         'sequence_name': sequence_name,
                         'filenames': [filename],
-                    })
+                    }
+                    for filename in filenames
+                    if filename != 'z-KziTO_5so_0019_start0_end85_h596_w596'
+                )
         self.mapping = mapping
         self.epoch_length = len(mapping)
 
@@ -109,10 +109,7 @@ class Dataset(BaseDataset):
             keys (list): List of full keys.
         """
         assert isinstance(filenames, list), 'Filenames should be a list.'
-        keys = []
-        for filename in filenames:
-            keys.append('%s/%s' % (sequence_name, filename))
-        return keys
+        return [f'{sequence_name}/{filename}' for filename in filenames]
 
     def _getitem(self, index, concat=True):
         r"""Gets selected files.
@@ -152,9 +149,7 @@ class Dataset(BaseDataset):
                 chosen_idxs = [0, frames.size(0) - 1]
             else:
                 chosen_idxs = random.sample(range(frames.size(0)), 2)
-            chosen_images = []
-            for idx in chosen_idxs:
-                chosen_images.append(Image.fromarray(frames[idx].numpy()))
+            chosen_images = [Image.fromarray(frames[idx].numpy()) for idx in chosen_idxs]
         except Exception:
             print('Issue with file:', sequence_name, filenames)
             blank = np.zeros((512, 512, 3), dtype=np.uint8)
@@ -171,7 +166,7 @@ class Dataset(BaseDataset):
         # Create copy of keypoint data types before post aug.
         kp_data = {}
         for data_type in self.keypoint_data_types:
-            new_key = data_type + '_xy'
+            new_key = f'{data_type}_xy'
             kp_data[new_key] = copy.deepcopy(data[data_type])
 
         # Apply ops post augmentation.

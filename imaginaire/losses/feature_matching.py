@@ -11,10 +11,10 @@ class FeatureMatchingLoss(nn.Module):
         super(FeatureMatchingLoss, self).__init__()
         if criterion == 'l1':
             self.criterion = nn.L1Loss()
-        elif criterion == 'l2' or criterion == 'mse':
+        elif criterion in ['l2', 'mse']:
             self.criterion = nn.MSELoss()
         else:
-            raise ValueError('Criterion %s is not recognized' % criterion)
+            raise ValueError(f'Criterion {criterion} is not recognized')
 
     def forward(self, fake_features, real_features):
         r"""Return the target vector for the binary cross entropy loss

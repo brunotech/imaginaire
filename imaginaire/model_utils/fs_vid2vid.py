@@ -89,8 +89,7 @@ def pick_image(images, idx):
     elif type(idx) == int:
         return images[:, idx]
     idx = idx.long().view(-1, 1, 1, 1, 1)
-    image = images.gather(1, idx.expand_as(images)[:, 0:1])[:, 0]
-    return image
+    return images.gather(1, idx.expand_as(images)[:, 0:1])[:, 0]
 
 
 def crop_face_from_data(cfg, is_inference, data):
@@ -136,7 +135,7 @@ def crop_face_from_data(cfg, is_inference, data):
         data['label'], data['few_shot_label'] = label, ref_labels
     if is_inference:
         if 'common_attr' not in data:
-            data['common_attr'] = dict()
+            data['common_attr'] = {}
         data['common_attr']['crop_coords'] = crop_coords, ref_crop_coords
     return data
 
@@ -268,7 +267,7 @@ def crop_person_from_data(cfg, is_inference, data):
     if 'few_shot_human_instance_maps' in data:
         del data['few_shot_human_instance_maps']
     if is_inference:
-        data['common_attr'] = dict()
+        data['common_attr'] = {}
         data['common_attr']['crop_coords'] = crop_coords, ref_crop_coords
 
     return data
@@ -391,10 +390,7 @@ def select_object(data, obj_indices=None):
             # use the obj_index to get the target person from the list, and
             # write it back to the dict.
             # data[op_key][i]['people'] = [people[obj_indices[i]]]
-            if obj_indices is not None:
-                data[op_key][i] = people[obj_indices[i]]
-            else:
-                data[op_key][i] = people[0]
+            data[op_key][i] = people[0] if obj_indices is None else people[obj_indices[i]]
     return data
 
 
@@ -726,8 +722,9 @@ def crop_hand_from_output(data_cfg, image, input_label):
 
     output = None
     for i in range(input_label.size(0)):
-        coords = get_hand_bbox_for_output(data_cfg, input_label[i:i + 1])
-        if coords:
+        if coords := get_hand_bbox_for_output(
+            data_cfg, input_label[i : i + 1]
+        ):
             for coord in coords:
                 ys, ye, xs, xe = coord
                 output_i = image[i:i + 1, -3:, ys:ye, xs:xe]
@@ -755,11 +752,10 @@ def get_hand_bbox_for_output(data_cfg, pose):
     coords = []
     colors = [[0.95, 0.5, 0.95], [0.95, 0.95, 0.5]]
     for i, color in enumerate(colors):
-        if pose.shape[1] > 6:  # Using one-hot encoding for openpose.
-            idx = -3 if i == 0 else -2
-            hand = (pose[:, idx] == 1).nonzero(as_tuple=False)
-        else:
+        if pose.shape[1] <= 6:
             raise ValueError('Not implemented yet.')
+        idx = -3 if i == 0 else -2
+        hand = (pose[:, idx] == 1).nonzero(as_tuple=False)
         if hand.size(0):
             y, x = hand[:, 1], hand[:, 2]
             ys, ye, xs, xe = y.min().item(), y.max().item(), \
@@ -787,10 +783,7 @@ def pre_process_densepose(pose_cfg, pose_map, is_infer=False):
     assert (part_map >= 0).all() and (part_map < 25).all()
 
     # Randomly drop some body part during training.
-    if not is_infer:
-        random_drop_prob = getattr(pose_cfg, 'random_drop_prob', 0)
-    else:
-        random_drop_prob = 0
+    random_drop_prob = 0 if is_infer else getattr(pose_cfg, 'random_drop_prob', 0)
     if random_drop_prob > 0:
         densepose_map = pose_map[:, :, :3]
         for part_id in range(1, 25):
@@ -852,10 +845,7 @@ def detach(output):
         output (dict): Detached output dict.
     """
     if type(output) == dict:
-        new_dict = dict()
-        for k, v in output.items():
-            new_dict[k] = detach(v)
-        return new_dict
+        return {k: detach(v) for k, v in output.items()}
     elif type(output) == torch.Tensor:
         return output.detach()
     return output

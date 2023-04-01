@@ -40,17 +40,15 @@ def parse_flownetc(modules, weights, biases):
     ]
     i = 0
     for m in modules:
-        if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
+        if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
             weight = weights[keys[i]].copy()
             bias = biases[keys[i]].copy()
             if keys[i] == 'conv1':
                 m.weight.data[:, :, :, :] = torch.from_numpy(
                     np.flip(weight, axis=1).copy())
-                m.bias.data[:] = torch.from_numpy(bias)
             else:
                 m.weight.data[:, :, :, :] = torch.from_numpy(weight)
-                m.bias.data[:] = torch.from_numpy(bias)
-
+            m.bias.data[:] = torch.from_numpy(bias)
             i = i + 1
     return
 
@@ -91,10 +89,10 @@ def parse_flownets(modules, weights, biases, param_prefix='net2_'):
             keys[i] = param_prefix + k
     i = 0
     for m in modules:
-        if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
+        if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
             weight = weights[keys[i]].copy()
             bias = biases[keys[i]].copy()
-            if keys[i] == param_prefix + 'conv1':
+            if keys[i] == f'{param_prefix}conv1':
                 m.weight.data[:, 0:3, :, :] = torch.from_numpy(
                     np.flip(weight[:, 0:3, :, :], axis=1).copy())
                 m.weight.data[:, 3:6, :, :] = torch.from_numpy(
@@ -103,12 +101,10 @@ def parse_flownets(modules, weights, biases, param_prefix='net2_'):
                     np.flip(weight[:, 6:9, :, :], axis=1).copy())
                 m.weight.data[:, 9::, :, :] = torch.from_numpy(
                     weight[:, 9:, :, :].copy())
-                if m.bias is not None:
-                    m.bias.data[:] = torch.from_numpy(bias)
             else:
                 m.weight.data[:, :, :, :] = torch.from_numpy(weight)
-                if m.bias is not None:
-                    m.bias.data[:] = torch.from_numpy(bias)
+            if m.bias is not None:
+                m.bias.data[:] = torch.from_numpy(bias)
             i = i + 1
     return
 
@@ -149,22 +145,20 @@ def parse_flownetsonly(modules, weights, biases, param_prefix=''):
             keys[i] = param_prefix + k
     i = 0
     for m in modules:
-        if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
+        if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
             weight = weights[keys[i]].copy()
             bias = biases[keys[i]].copy()
-            if keys[i] == param_prefix + 'conv1':
+            if keys[i] == f'{param_prefix}conv1':
                 # print ("%s :"%(keys[i]), m.weight.size(), m.bias.size(),
                 # tf_w[keys[i]].shape[::-1])
                 m.weight.data[:, 0:3, :, :] = torch.from_numpy(
                     np.flip(weight[:, 0:3, :, :], axis=1).copy())
                 m.weight.data[:, 3:6, :, :] = torch.from_numpy(
                     np.flip(weight[:, 3:6, :, :], axis=1).copy())
-                if m.bias is not None:
-                    m.bias.data[:] = torch.from_numpy(bias)
             else:
                 m.weight.data[:, :, :, :] = torch.from_numpy(weight)
-                if m.bias is not None:
-                    m.bias.data[:] = torch.from_numpy(bias)
+            if m.bias is not None:
+                m.bias.data[:] = torch.from_numpy(bias)
             i = i + 1
     return
 
@@ -211,20 +205,18 @@ def parse_flownetsd(modules, weights, biases, param_prefix='netsd_'):
 
     i = 0
     for m in modules:
-        if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
+        if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
             weight = weights[keys[i]].copy()
             bias = biases[keys[i]].copy()
-            if keys[i] == param_prefix + 'conv0':
+            if keys[i] == f'{param_prefix}conv0':
                 m.weight.data[:, 0:3, :, :] = torch.from_numpy(
                     np.flip(weight[:, 0:3, :, :], axis=1).copy())
                 m.weight.data[:, 3:6, :, :] = torch.from_numpy(
                     np.flip(weight[:, 3:6, :, :], axis=1).copy())
-                if m.bias is not None:
-                    m.bias.data[:] = torch.from_numpy(bias)
             else:
                 m.weight.data[:, :, :, :] = torch.from_numpy(weight)
-                if m.bias is not None:
-                    m.bias.data[:] = torch.from_numpy(bias)
+            if m.bias is not None:
+                m.bias.data[:] = torch.from_numpy(bias)
             i = i + 1
 
     return
@@ -256,20 +248,18 @@ def parse_flownetfusion(modules, weights, biases, param_prefix='fuse_'):
 
     i = 0
     for m in modules:
-        if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
+        if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
             weight = weights[keys[i]].copy()
             bias = biases[keys[i]].copy()
-            if keys[i] == param_prefix + 'conv0':
+            if keys[i] == f'{param_prefix}conv0':
                 m.weight.data[:, 0:3, :, :] = torch.from_numpy(
                     np.flip(weight[:, 0:3, :, :], axis=1).copy())
                 m.weight.data[:, 3::, :, :] = torch.from_numpy(
                     weight[:, 3:, :, :].copy())
-                if m.bias is not None:
-                    m.bias.data[:] = torch.from_numpy(bias)
             else:
                 m.weight.data[:, :, :, :] = torch.from_numpy(weight)
-                if m.bias is not None:
-                    m.bias.data[:] = torch.from_numpy(bias)
+            if m.bias is not None:
+                m.bias.data[:] = torch.from_numpy(bias)
             i = i + 1
 
     return

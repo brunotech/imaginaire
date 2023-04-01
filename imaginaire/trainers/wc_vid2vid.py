@@ -80,9 +80,8 @@ class Trainer(Vid2VidTrainer):
         if test_in_model_average_mode:
             if hasattr(self.net_G.module.averaged_model, 'reset'):
                 self.net_G.module.averaged_model.reset()
-        else:
-            if hasattr(self.net_G.module, 'reset'):
-                self.net_G.module.reset()
+        elif hasattr(self.net_G.module, 'reset'):
+            self.net_G.module.reset()
 
     def create_sequence_output_dir(self, output_dir, key):
         r"""Create output subdir for this sequence.
@@ -97,8 +96,8 @@ class Trainer(Vid2VidTrainer):
         seq_dir = '/'.join(key.split('/')[:-1])
         output_dir = os.path.join(output_dir, seq_dir)
         os.makedirs(output_dir, exist_ok=True)
-        os.makedirs(output_dir + '/all', exist_ok=True)
-        os.makedirs(output_dir + '/fake', exist_ok=True)
+        os.makedirs(f'{output_dir}/all', exist_ok=True)
+        os.makedirs(f'{output_dir}/fake', exist_ok=True)
         seq_name = seq_dir.replace('/', '-')
         return output_dir, seq_name
 
@@ -132,21 +131,21 @@ class Trainer(Vid2VidTrainer):
                 # Create output dir for this sequence.
                 if idx == 0:
                     output_dir, seq_name = \
-                        self.create_sequence_output_dir(root_output_dir, key)
+                            self.create_sequence_output_dir(root_output_dir, key)
                     video_path = os.path.join(output_dir, '..', seq_name)
 
                 # Get output, and save all vis to all/.
                 data['img_name'] = filename
                 data = to_cuda(data)
-                output = self.test_single(data, output_dir=output_dir + '/all')
+                output = self.test_single(data, output_dir=f'{output_dir}/all')
 
                 # Dump just the fake image here.
                 fake = tensor2im(output['fake_images'])[0]
                 video.append(fake)
-                imageio.imsave(output_dir + '/fake/%s.jpg' % (filename), fake)
+                imageio.imsave(f'{output_dir}/fake/{filename}.jpg', fake)
 
             # Save as mp4 and gif.
-            imageio.mimsave(video_path + '.mp4', video, fps=15)
+            imageio.mimsave(f'{video_path}.mp4', video, fps=15)
 
     def test_single(self, data, output_dir=None, save_fake_only=False):
         r"""The inference function. If output_dir exists, also save the
@@ -226,14 +225,13 @@ class Trainer(Vid2VidTrainer):
             guidance_image = [np.zeros_like(item) for item in im]
             guidance_mask = [np.zeros_like(item) for item in im]
 
-        # Create output.
-        vis_images = [
+        return [
             *vis_labels,
             im,
-            guidance_image, guidance_mask,
+            guidance_image,
+            guidance_mask,
             tensor2im(self.net_G_output['fake_images']),
         ]
-        return vis_images
 
     def gen_frames(self, data, use_model_average=False):
         r"""Generate a sequence of frames given a sequence of data.
@@ -245,11 +243,7 @@ class Trainer(Vid2VidTrainer):
         """
         net_G_output = None  # Previous generator output.
         data_prev = None  # Previous data.
-        if use_model_average:
-            net_G = self.net_G.module.averaged_model
-        else:
-            net_G = self.net_G
-
+        net_G = self.net_G.module.averaged_model if use_model_average else self.net_G
         # Iterate through the length of sequence.
         self.net_G_module.reset_renderer(is_flipped_input=data['is_flipped'])
 
@@ -306,17 +300,16 @@ class Trainer(Vid2VidTrainer):
 
         # Get keypoint mapping.
         unprojection = None
-        if t >= self.guidance_start_after:
-            if 'unprojections' in data:
-                try:
-                    # Remove unwanted padding.
-                    unprojection = {}
-                    for key, value in data['unprojections'].items():
-                        value = value[0, t].cpu().numpy()
-                        length = value[-1][0]
-                        unprojection[key] = value[:length]
-                except:  # noqa
-                    pass
+        if t >= self.guidance_start_after and 'unprojections' in data:
+            try:
+                # Remove unwanted padding.
+                unprojection = {}
+                for key, value in data['unprojections'].items():
+                    value = value[0, t].cpu().numpy()
+                    length = value[-1][0]
+                    unprojection[key] = value[:length]
+            except:  # noqa
+                pass
 
         if data_prev is not None:
             # Concat previous labels/fake images to the ones before.
@@ -329,14 +322,14 @@ class Trainer(Vid2VidTrainer):
         else:
             prev_labels = prev_images = None
 
-        data_t = dict()
-        data_t['label'] = label
-        data_t['image'] = image
-        data_t['prev_labels'] = prev_labels
-        data_t['prev_images'] = prev_images
-        data_t['real_prev_image'] = data['images'][:, t - 1] if t > 0 else None
-        data_t['unprojection'] = unprojection
-        return data_t
+        return {
+            'label': label,
+            'image': image,
+            'prev_labels': prev_labels,
+            'prev_images': prev_images,
+            'real_prev_image': data['images'][:, t - 1] if t > 0 else None,
+            'unprojection': unprojection,
+        }
 
     def save_image(self, path, data):
         r"""Save the output images to path.
@@ -446,15 +439,14 @@ class Trainer(Vid2VidTrainer):
             image_grid = np.hstack([np.vstack(im) for im in
                                     vis_images if im is not None])
 
-            print('Save output images to {}'.format(path))
+            print(f'Save output images to {path}')
             os.makedirs(os.path.dirname(path), exist_ok=True)
             imageio.imwrite(path, image_grid)
 
             # Gather all inputs and outputs for dumping into video.
             if self.sequence_length > 1:
                 input_images, output_images, output_guidance = [], [], []
-                for item in all_info['inputs']:
-                    input_images.append(tensor2im(item['image'])[0])
+                input_images.extend(tensor2im(item['image'])[0] for item in all_info['inputs'])
                 for item in all_info['outputs']:
                     output_images.append(tensor2im(item['fake_images'])[0])
                     if item['guidance_images_and_masks'] is not None:
@@ -463,17 +455,25 @@ class Trainer(Vid2VidTrainer):
                     else:
                         output_guidance.append(np.zeros_like(output_images[-1]))
 
-                imageio.mimwrite(os.path.splitext(path)[0] + '.mp4',
-                                 output_images, fps=2, macro_block_size=None)
-                imageio.mimwrite(os.path.splitext(path)[0] + '_guidance.mp4',
-                                 output_guidance, fps=2, macro_block_size=None)
+                imageio.mimwrite(
+                    f'{os.path.splitext(path)[0]}.mp4',
+                    output_images,
+                    fps=2,
+                    macro_block_size=None,
+                )
+                imageio.mimwrite(
+                    f'{os.path.splitext(path)[0]}_guidance.mp4',
+                    output_guidance,
+                    fps=2,
+                    macro_block_size=None,
+                )
 
-            # for idx, item in enumerate(output_guidance):
-            #     imageio.imwrite(os.path.splitext(
-            #         path)[0] + '_guidance_%d.jpg' % (idx), item)
-            # for idx, item in enumerate(input_images):
-            #     imageio.imwrite(os.path.splitext(
-            #         path)[0] + '_input_%d.jpg' % (idx), item)
+                # for idx, item in enumerate(output_guidance):
+                #     imageio.imwrite(os.path.splitext(
+                #         path)[0] + '_guidance_%d.jpg' % (idx), item)
+                # for idx, item in enumerate(input_images):
+                #     imageio.imwrite(os.path.splitext(
+                #         path)[0] + '_input_%d.jpg' % (idx), item)
 
         self.net_G.float()
 
@@ -490,10 +490,7 @@ class Trainer(Vid2VidTrainer):
             checkpoint_path (str): Path to the checkpoint.
         """
         # Create the single image model.
-        if self.train_data_loader is None:
-            load_single_image_model_weights = False
-        else:
-            load_single_image_model_weights = True
+        load_single_image_model_weights = self.train_data_loader is not None
         self.net_G.module._init_single_image_model(
             load_weights=load_single_image_model_weights)
 

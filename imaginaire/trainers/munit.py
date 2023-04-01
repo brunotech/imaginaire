@@ -103,12 +103,12 @@ class Trainer(BaseTrainer):
         # GAN loss
         if self.gan_recon:
             self.gen_losses['gan_a'] = \
-                0.5 * (self.criteria['gan'](net_D_output['out_ba'],
+                    0.5 * (self.criteria['gan'](net_D_output['out_ba'],
                                             True, dis_update=False) +
                        self.criteria['gan'](net_D_output['out_aa'],
                                             True, dis_update=False))
             self.gen_losses['gan_b'] = \
-                0.5 * (self.criteria['gan'](net_D_output['out_ab'],
+                    0.5 * (self.criteria['gan'](net_D_output['out_ab'],
                                             True, dis_update=False) +
                        self.criteria['gan'](net_D_output['out_bb'],
                                             True, dis_update=False))
@@ -118,65 +118,63 @@ class Trainer(BaseTrainer):
             self.gen_losses['gan_b'] = self.criteria['gan'](
                 net_D_output['out_ab'], True, dis_update=False)
         self.gen_losses['gan'] = \
-            self.gen_losses['gan_a'] + self.gen_losses['gan_b']
+                self.gen_losses['gan_a'] + self.gen_losses['gan_b']
 
         # Perceptual loss
         if perceptual:
             self.gen_losses['perceptual_a'] = \
-                self.criteria['perceptual'](net_G_output['images_ab'],
+                    self.criteria['perceptual'](net_G_output['images_ab'],
                                             data['images_a'])
             self.gen_losses['perceptual_b'] = \
-                self.criteria['perceptual'](net_G_output['images_ba'],
+                    self.criteria['perceptual'](net_G_output['images_ba'],
                                             data['images_b'])
             self.gen_losses['perceptual'] = \
-                self.gen_losses['perceptual_a'] + \
-                self.gen_losses['perceptual_b']
+                    self.gen_losses['perceptual_a'] + \
+                    self.gen_losses['perceptual_b']
 
         # Image reconstruction loss
         if image_recon:
             self.gen_losses['image_recon'] = \
-                self.criteria['image_recon'](net_G_output['images_aa'],
+                    self.criteria['image_recon'](net_G_output['images_aa'],
                                              data['images_a']) + \
-                self.criteria['image_recon'](net_G_output['images_bb'],
+                    self.criteria['image_recon'](net_G_output['images_bb'],
                                              data['images_b'])
 
         # Style reconstruction loss
         self.gen_losses['style_recon_a'] = \
-            self.criteria['style_recon'](net_G_output['style_ba'],
+                self.criteria['style_recon'](net_G_output['style_ba'],
                                          net_G_output['style_a_rand'])
         self.gen_losses['style_recon_b'] = \
-            self.criteria['style_recon'](net_G_output['style_ab'],
+                self.criteria['style_recon'](net_G_output['style_ab'],
                                          net_G_output['style_b_rand'])
         self.gen_losses['style_recon'] = \
-            self.gen_losses['style_recon_a'] + self.gen_losses['style_recon_b']
+                self.gen_losses['style_recon_a'] + self.gen_losses['style_recon_b']
 
         # Content reconstruction loss
         self.gen_losses['content_recon_a'] = \
-            self.criteria['content_recon'](net_G_output['content_ab'],
+                self.criteria['content_recon'](net_G_output['content_ab'],
                                            net_G_output['content_a'].detach())
         self.gen_losses['content_recon_b'] = \
-            self.criteria['content_recon'](net_G_output['content_ba'],
+                self.criteria['content_recon'](net_G_output['content_ba'],
                                            net_G_output['content_b'].detach())
         self.gen_losses['content_recon'] = \
-            self.gen_losses['content_recon_a'] + \
-            self.gen_losses['content_recon_b']
+                self.gen_losses['content_recon_a'] + \
+                self.gen_losses['content_recon_b']
 
         # KL loss
         self.gen_losses['kl'] = \
-            self.criteria['kl'](net_G_output['style_a']) + \
-            self.criteria['kl'](net_G_output['style_b'])
+                self.criteria['kl'](net_G_output['style_a']) + \
+                self.criteria['kl'](net_G_output['style_b'])
 
         # Cycle reconstruction loss
         if cycle_recon:
             self.gen_losses['cycle_recon'] = \
-                self.criteria['image_recon'](net_G_output['images_aba'],
+                    self.criteria['image_recon'](net_G_output['images_aba'],
                                              data['images_a']) + \
-                self.criteria['image_recon'](net_G_output['images_bab'],
+                    self.criteria['image_recon'](net_G_output['images_bab'],
                                              data['images_b'])
 
-        # Compute total loss
-        total_loss = self._get_total_loss(gen_forward=True)
-        return total_loss
+        return self._get_total_loss(gen_forward=True)
 
     def dis_forward(self, data):
         r"""Compute the loss for MUNIT discriminator.
@@ -198,13 +196,13 @@ class Trainer(BaseTrainer):
 
         # GAN loss.
         self.dis_losses['gan_a'] = \
-            self.criteria['gan'](net_D_output['out_a'], True) + \
-            self.criteria['gan'](net_D_output['out_ba'], False)
+                self.criteria['gan'](net_D_output['out_a'], True) + \
+                self.criteria['gan'](net_D_output['out_ba'], False)
         self.dis_losses['gan_b'] = \
-            self.criteria['gan'](net_D_output['out_b'], True) + \
-            self.criteria['gan'](net_D_output['out_ab'], False)
+                self.criteria['gan'](net_D_output['out_b'], True) + \
+                self.criteria['gan'](net_D_output['out_ab'], False)
         self.dis_losses['gan'] = \
-            self.dis_losses['gan_a'] + self.dis_losses['gan_b']
+                self.dis_losses['gan_a'] + self.dis_losses['gan_b']
 
         # Gradient penalty.
         if 'gp' in self.weights:
@@ -219,30 +217,28 @@ class Trainer(BaseTrainer):
             self.dis_losses['gp_b'] = self.criteria['gp'](
                 net_D_output_gp['images_ab'], net_D_output_gp['out_ab'])
             self.dis_losses['gp'] = \
-                self.dis_losses['gp_a'] + self.dis_losses['gp_b']
+                    self.dis_losses['gp_a'] + self.dis_losses['gp_b']
 
         # Consistency regularization.
         self.dis_losses['consistency_reg'] = \
-            torch.tensor(0., device=torch.device('cuda'))
+                torch.tensor(0., device=torch.device('cuda'))
         if 'consistency_reg' in self.weights:
             data_aug, net_G_output_aug = {}, {}
             data_aug['images_a'] = random_shift(data['images_a'].flip(-1))
             data_aug['images_b'] = random_shift(data['images_b'].flip(-1))
             net_G_output_aug['images_ab'] = \
-                random_shift(net_G_output['images_ab'].flip(-1))
+                    random_shift(net_G_output['images_ab'].flip(-1))
             net_G_output_aug['images_ba'] = \
-                random_shift(net_G_output['images_ba'].flip(-1))
+                    random_shift(net_G_output['images_ba'].flip(-1))
             net_D_output_aug = self.net_D(data_aug, net_G_output_aug)
             feature_names = ['fea_ba', 'fea_ab',
                              'fea_a', 'fea_b']
             for feature_name in feature_names:
                 self.dis_losses['consistency_reg'] += \
-                    torch.pow(net_D_output_aug[feature_name] -
+                        torch.pow(net_D_output_aug[feature_name] -
                               net_D_output[feature_name], 2).mean()
 
-        # Compute total loss
-        total_loss = self._get_total_loss(gen_forward=False)
-        return total_loss
+        return self._get_total_loss(gen_forward=False)
 
     def _get_visualizations(self, data):
         r"""Compute visualization image.
@@ -257,17 +253,18 @@ class Trainer(BaseTrainer):
         with torch.no_grad():
             net_G_output = net_G_for_evaluation(data, random_style=False)
             net_G_output_random = net_G_for_evaluation(data)
-            vis_images = [data['images_a'],
-                          data['images_b'],
-                          net_G_output['images_aa'],
-                          net_G_output['images_bb'],
-                          net_G_output['images_ab'],
-                          net_G_output_random['images_ab'],
-                          net_G_output['images_ba'],
-                          net_G_output_random['images_ba'],
-                          net_G_output['images_aba'],
-                          net_G_output['images_bab']]
-            return vis_images
+            return [
+                data['images_a'],
+                data['images_b'],
+                net_G_output['images_aa'],
+                net_G_output['images_bb'],
+                net_G_output['images_ab'],
+                net_G_output_random['images_ab'],
+                net_G_output['images_ba'],
+                net_G_output_random['images_ba'],
+                net_G_output['images_aba'],
+                net_G_output['images_bab'],
+            ]
 
     def write_metrics(self):
         r"""Compute metrics and save them to tensorboard"""

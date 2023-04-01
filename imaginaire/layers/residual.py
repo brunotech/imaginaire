@@ -52,18 +52,20 @@ class _BaseResBlock(nn.Module):
         if block != LinearBlock:
             conv_base_params = dict(stride=1, dilation=dilation,
                                     groups=groups, padding_mode=padding_mode)
-            conv_main_params.update(conv_base_params)
-            conv_main_params.update(
-                dict(kernel_size=kernel_size,
-                     activation_norm_type=activation_norm_type,
-                     activation_norm_params=activation_norm_params,
-                     padding=padding))
-            conv_skip_params.update(conv_base_params)
-            conv_skip_params.update(dict(kernel_size=1))
+            conv_main_params |= conv_base_params
+            conv_main_params |= dict(
+                kernel_size=kernel_size,
+                activation_norm_type=activation_norm_type,
+                activation_norm_params=activation_norm_params,
+                padding=padding,
+            )
+            conv_skip_params |= conv_base_params
+            conv_skip_params |= dict(kernel_size=1)
             if skip_activation_norm:
-                conv_skip_params.update(
-                    dict(activation_norm_type=activation_norm_type,
-                         activation_norm_params=activation_norm_params))
+                conv_skip_params |= dict(
+                    activation_norm_type=activation_norm_type,
+                    activation_norm_params=activation_norm_params,
+                )
 
         # Other parameters.
         other_params = dict(weight_norm_type=weight_norm_type,
@@ -71,21 +73,26 @@ class _BaseResBlock(nn.Module):
                             apply_noise=apply_noise)
 
         # Residual branch.
-        if order.find('A') < order.find('C') and \
-                (activation_norm_type == '' or activation_norm_type == 'none'):
+        if order.find('A') < order.find('C') and activation_norm_type in [
+            '',
+            'none',
+        ]:
             # Nonlinearity is the first operation in the residual path.
             # In-place nonlinearity will modify the input variable and cause
             # backward error.
             first_inplace = False
         else:
             first_inplace = inplace_nonlinearity
-        self.conv_block_0 = block(in_channels, hidden_channels,
-                                  bias=biases[0],
-                                  nonlinearity=nonlinearity,
-                                  order=order[0:3],
-                                  inplace_nonlinearity=first_inplace,
-                                  **conv_main_params,
-                                  **other_params)
+        self.conv_block_0 = block(
+            in_channels,
+            hidden_channels,
+            bias=biases[0],
+            nonlinearity=nonlinearity,
+            order=order[:3],
+            inplace_nonlinearity=first_inplace,
+            **conv_main_params,
+            **other_params
+        )
         self.conv_block_1 = block(hidden_channels, out_channels,
                                   bias=biases[1],
                                   nonlinearity=nonlinearity,
@@ -96,21 +103,21 @@ class _BaseResBlock(nn.Module):
 
         # Shortcut branch.
         if self.learn_shortcut:
-            if skip_nonlinearity:
-                skip_nonlinearity_type = nonlinearity
-            else:
-                skip_nonlinearity_type = ''
-            self.conv_block_s = block(in_channels, out_channels,
-                                      bias=biases[2],
-                                      nonlinearity=skip_nonlinearity_type,
-                                      order=order[0:3],
-                                      **conv_skip_params,
-                                      **other_params)
+            skip_nonlinearity_type = nonlinearity if skip_nonlinearity else ''
+            self.conv_block_s = block(
+                in_channels,
+                out_channels,
+                bias=biases[2],
+                nonlinearity=skip_nonlinearity_type,
+                order=order[:3],
+                **conv_skip_params,
+                **other_params
+            )
 
         # Whether this block expects conditional inputs.
         self.conditional = \
-            getattr(self.conv_block_0, 'conditional', False) or \
-            getattr(self.conv_block_1, 'conditional', False)
+                getattr(self.conv_block_0, 'conditional', False) or \
+                getattr(self.conv_block_1, 'conditional', False)
 
     def conv_blocks(self, x, *cond_inputs, **kw_cond_inputs):
         r"""Returns the output of the residual branch.
@@ -147,8 +154,7 @@ class _BaseResBlock(nn.Module):
             x_shortcut = self.conv_block_s(x, *cond_inputs, **kw_cond_inputs)
         else:
             x_shortcut = x
-        output = x_shortcut + dx
-        return output
+        return x_shortcut + dx
 
 
 class ResLinearBlock(_BaseResBlock):
@@ -512,8 +518,7 @@ class _BaseHyperResBlock(_BaseResBlock):
                                            norm_weights=norm_weights[2])
         else:
             x_shortcut = x
-        output = x_shortcut + dx
-        return output
+        return x_shortcut + dx
 
 
 class HyperRes2dBlock(_BaseHyperResBlock):
@@ -636,13 +641,9 @@ class _BaseDownResBlock(_BaseResBlock):
         dx = self.conv_block_0(x, *cond_inputs)
         dx = self.conv_block_1(dx, *cond_inputs)
         dx = self.pooling(dx)
-        if self.learn_shortcut:
-            x_shortcut = self.conv_block_s(x, *cond_inputs)
-        else:
-            x_shortcut = x
+        x_shortcut = self.conv_block_s(x, *cond_inputs) if self.learn_shortcut else x
         x_shortcut = self.pooling(x_shortcut)
-        output = x_shortcut + dx
-        return output
+        return x_shortcut + dx
 
 
 class DownRes2dBlock(_BaseDownResBlock):
@@ -776,7 +777,7 @@ class _BaseUpResBlock(_BaseResBlock):
         else:
             x_shortcut = self.upsample(x)
 
-        if self.order[0:3] == 'NAC':
+        if self.order[:3] == 'NAC':
             for ix, layer in enumerate(self.conv_block_0.layers.values()):
                 if getattr(layer, 'conditional', False):
                     x = layer(x, *cond_inputs)
@@ -789,8 +790,7 @@ class _BaseUpResBlock(_BaseResBlock):
             x = self.upsample(x)
         x = self.conv_block_1(x, *cond_inputs)
 
-        output = x_shortcut + x
-        return output
+        return x_shortcut + x
 
 
 class UpRes2dBlock(_BaseUpResBlock):
@@ -939,9 +939,7 @@ class _BasePartialResBlock(_BaseResBlock):
             x_shortcut = x
         output = x_shortcut + dx
 
-        if mask_out is not None:
-            return output, mask_out
-        return output
+        return (output, mask_out) if mask_out is not None else output
 
 
 class PartialRes2dBlock(_BasePartialResBlock):

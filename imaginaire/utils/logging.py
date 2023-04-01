@@ -28,11 +28,11 @@ def init_logging(config_path, logdir):
         str: Return log dir
     """
     config_file = os.path.basename(config_path)
-    root_dir = 'logs'
     date_uid = get_date_uid()
     # example: logs/2019_0125_1047_58_spade_cocostuff
     log_file = '_'.join([date_uid, os.path.splitext(config_file)[0]])
     if logdir is None:
+        root_dir = 'logs'
         logdir = os.path.join(root_dir, log_file)
     return date_uid, logdir
 
@@ -44,7 +44,7 @@ def make_logging_dir(logdir):
     Args:
         logdir (str): Log directory name
     """
-    print('Make folder {}'.format(logdir))
+    print(f'Make folder {logdir}')
     os.makedirs(logdir, exist_ok=True)
     tensorboard_dir = os.path.join(logdir, 'tensorboard')
     os.makedirs(tensorboard_dir, exist_ok=True)

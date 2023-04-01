@@ -31,13 +31,15 @@ class Dataset(VideoDataset):
         idx_to_key = []
         for lmdb_idx, sequence_list in enumerate(self.sequence_lists):
             for sequence_name, filenames in sequence_list.items():
-                for filename in filenames:
-                    idx_to_key.append({
+                idx_to_key.extend(
+                    {
                         'lmdb_root': self.lmdb_roots[lmdb_idx],
                         'lmdb_idx': lmdb_idx,
                         'sequence_name': sequence_name,
                         'filenames': [filename],
-                    })
+                    }
+                    for filename in filenames
+                )
         self.mapping = idx_to_key
         self.epoch_length = len(self.mapping)
         return self.mapping, self.epoch_length

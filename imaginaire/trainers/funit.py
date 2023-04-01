@@ -73,18 +73,16 @@ class Trainer(BaseTrainer):
 
         # Image reconstruction loss
         self.gen_losses['image_recon'] = \
-            self.criteria['image_recon'](net_G_output['images_recon'],
+                self.criteria['image_recon'](net_G_output['images_recon'],
                                          data['images_content'])
 
         # Feature matching loss
         self.gen_losses['feature_matching'] = \
-            self.criteria['feature_matching'](
+                self.criteria['feature_matching'](
                 net_D_output['fake_features_trans'],
                 net_D_output['real_features_style'])
 
-        # Compute total loss
-        total_loss = self._get_total_loss(gen_forward=True)
-        return total_loss
+        return self._get_total_loss(gen_forward=True)
 
     def dis_forward(self, data):
         r"""Compute the loss for FUNIT discriminator.
@@ -100,14 +98,12 @@ class Trainer(BaseTrainer):
         self._time_before_loss()
 
         self.dis_losses['gan'] = \
-            self.criteria['gan'](net_D_output['real_out_style'], True) + \
-            self.criteria['gan'](net_D_output['fake_out_trans'], False)
+                self.criteria['gan'](net_D_output['real_out_style'], True) + \
+                self.criteria['gan'](net_D_output['fake_out_trans'], False)
 
         self.dis_losses['gp'] = torch.tensor(0., device=torch.device('cuda'))
 
-        # Compute total loss
-        total_loss = self._get_total_loss(gen_forward=False)
-        return total_loss
+        return self._get_total_loss(gen_forward=False)
 
     def _get_visualizations(self, data):
         r"""Compute visualization image.

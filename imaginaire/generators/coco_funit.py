@@ -39,9 +39,7 @@ class Generator(nn.Module):
         images_trans = self.generator.decode(content_a, style_b)
         images_recon = self.generator.decode(content_a, style_a)
 
-        net_G_output = dict(images_trans=images_trans,
-                            images_recon=images_recon)
-        return net_G_output
+        return dict(images_trans=images_trans, images_recon=images_recon)
 
     def inference(self, data, keep_original_size=True):
         r"""COCO-FUNIT inference.
@@ -162,8 +160,7 @@ class COCOFUNITTranslator(nn.Module):
         """
         # reconstruct an image
         content, style = self.encode(images)
-        images_recon = self.decode(content, style)
-        return images_recon
+        return self.decode(content, style)
 
     def encode(self, images):
         r"""Encoder images to get their content and style codes.
@@ -190,5 +187,4 @@ class COCOFUNITTranslator(nn.Module):
         style_in = self.mlp_style(torch.cat([style, usb], 1))
         coco_style = style_in * content_style_code
         coco_style = self.mlp(coco_style)
-        images = self.decoder(content, coco_style)
-        return images
+        return self.decoder(content, coco_style)

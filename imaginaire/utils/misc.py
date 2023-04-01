@@ -230,5 +230,4 @@ def apply_imagenet_normalization(input):
     # normalize the input using the ImageNet mean and std
     mean = normalized_input.new_tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1)
     std = normalized_input.new_tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)
-    output = (normalized_input - mean) / std
-    return output
+    return (normalized_input - mean) / std

@@ -89,11 +89,11 @@ class Discriminator(nn.Module):
         if real:
             out_a, fea_a, _ = self.discriminator_a(data['images_a'])
             out_b, fea_b, _ = self.discriminator_b(data['images_b'])
-            output.update(dict(out_a=out_a, out_b=out_b,
-                               fea_a=fea_a, fea_b=fea_b))
+            output |= dict(out_a=out_a, out_b=out_b, fea_a=fea_a, fea_b=fea_b)
         if gan_recon:
             out_aa, fea_aa, _ = self.discriminator_a(net_G_output['images_aa'])
             out_bb, fea_bb, _ = self.discriminator_b(net_G_output['images_bb'])
-            output.update(dict(out_aa=out_aa, out_bb=out_bb,
-                               fea_aa=fea_aa, fea_bb=fea_bb))
+            output |= dict(
+                out_aa=out_aa, out_bb=out_bb, fea_aa=fea_aa, fea_bb=fea_bb
+            )
         return output

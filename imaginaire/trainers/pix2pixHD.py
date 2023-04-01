@@ -53,8 +53,8 @@ class Trainer(SPADETrainer):
         Args:
             cfg (obj): Global configuration.
         """
-        self.criteria = dict()
-        self.weights = dict()
+        self.criteria = {}
+        self.weights = {}
         trainer_cfg = cfg.trainer
         loss_weight = cfg.trainer.loss_weight
         # GAN loss and feature matching loss.

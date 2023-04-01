@@ -29,7 +29,7 @@ def get_recursive_subdirectories(input_dir, ext):
         Returns:
         (list): List of directory paths relative to input_dir.
     """
-    lines = glob.glob('%s/**/*.%s' % (input_dir, ext), recursive=True)
+    lines = glob.glob(f'{input_dir}/**/*.{ext}', recursive=True)
     dirpaths = [os.path.dirname(item) for item in lines]
     dirpaths = [os.path.relpath(item, input_dir) for item in dirpaths]
     dirpaths = sorted(list(set(dirpaths)))

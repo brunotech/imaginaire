@@ -14,8 +14,7 @@ def fuse_math_min_mean_pos(x):
     r"""Fuse operation min mean for hinge loss computation of positive
     samples"""
     minval = torch.min(x - 1, x * 0)
-    loss = -torch.mean(minval)
-    return loss
+    return -torch.mean(minval)
 
 
 @torch.jit.script
@@ -23,8 +22,7 @@ def fuse_math_min_mean_neg(x):
     r"""Fuse operation min mean for hinge loss computation of negative
     samples"""
     minval = torch.min(-x - 1, x * 0)
-    loss = -torch.mean(minval)
-    return loss
+    return -torch.mean(minval)
 
 
 class GANLoss(nn.Module):
@@ -44,7 +42,7 @@ class GANLoss(nn.Module):
         self.real_label_tensor = None
         self.fake_label_tensor = None
         self.gan_mode = gan_mode
-        print('GAN mode: %s' % gan_mode)
+        print(f'GAN mode: {gan_mode}')
 
     def forward(self, dis_output, t_real, dis_update=True):
         r"""GAN loss computation.
@@ -58,19 +56,18 @@ class GANLoss(nn.Module):
         Returns:
             loss (tensor): Loss value.
         """
-        if isinstance(dis_output, list):
-            # For multi-scale discriminators.
-            # In this implementation, the loss is first averaged for each scale
-            # (batch size and number of locations) then averaged across scales,
-            # so that the gradient is not dominated by the discriminator that
-            # has the most output values (highest resolution).
-            loss = 0
-            for dis_output_i in dis_output:
-                assert isinstance(dis_output_i, torch.Tensor)
-                loss += self.loss(dis_output_i, t_real, dis_update)
-            return loss / len(dis_output)
-        else:
+        if not isinstance(dis_output, list):
             return self.loss(dis_output, t_real, dis_update)
+        # For multi-scale discriminators.
+        # In this implementation, the loss is first averaged for each scale
+        # (batch size and number of locations) then averaged across scales,
+        # so that the gradient is not dominated by the discriminator that
+        # has the most output values (highest resolution).
+        loss = 0
+        for dis_output_i in dis_output:
+            assert isinstance(dis_output_i, torch.Tensor)
+            loss += self.loss(dis_output_i, t_real, dis_update)
+        return loss / len(dis_output)
 
     def loss(self, dis_output, t_real, dis_update=True):
         r"""GAN loss computation.
@@ -85,7 +82,7 @@ class GANLoss(nn.Module):
         """
         if not dis_update:
             assert t_real, \
-                "The target should be real when updating the generator."
+                    "The target should be real when updating the generator."
 
         if self.gan_mode == 'non_saturated':
             target_tensor = self.get_target_tensor(dis_output, t_real)
@@ -103,12 +100,9 @@ class GANLoss(nn.Module):
             else:
                 loss = -torch.mean(dis_output)
         elif self.gan_mode == 'wasserstein':
-            if t_real:
-                loss = -torch.mean(dis_output)
-            else:
-                loss = torch.mean(dis_output)
+            loss = -torch.mean(dis_output) if t_real else torch.mean(dis_output)
         else:
-            raise ValueError('Unexpected gan_mode {}'.format(self.gan_mode))
+            raise ValueError(f'Unexpected gan_mode {self.gan_mode}')
         return loss
 
     def get_target_tensor(self, dis_output, t_real):

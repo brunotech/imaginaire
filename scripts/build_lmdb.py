@@ -33,8 +33,7 @@ def parse_args():
                         help='Is the dataset large?')
     parser.add_argument('--remove_missing', default=False, action='store_true',
                         help='Remove missing files from paired datasets?')
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 def main():
@@ -75,23 +74,19 @@ def main():
         print('>> Building file list.')
 
         # Get appropriate list of files.
-        if args.paired:
-            filenames = all_filenames
-        else:
-            filenames = all_filenames[data_type]
-
+        filenames = all_filenames if args.paired else all_filenames[data_type]
         for sequence in tqdm(filenames):
             for filename in copy.deepcopy(filenames[sequence]):
                 filepath = construct_file_path(
                     args.data_root, data_type, sequence, filename,
                     extensions[data_type])
-                key = '%s/%s' % (sequence, filename)
+                key = f'{sequence}/{filename}'
                 filesize = check_and_add(filepath, key, filepaths, keys,
                                          remove_missing=args.remove_missing)
 
                 # Remove file from list, if missing.
                 if filesize == -1 and args.paired and args.remove_missing:
-                    print('Removing %s from list' % (filename))
+                    print(f'Removing {filename} from list')
                     filenames[sequence].remove(filename)
                 data_size += filesize
 
@@ -109,16 +104,14 @@ def main():
         output_filepath = os.path.join(args.output_root, data_type)
         build_lmdb(filepaths, keys, output_filepath, data_size, args.large)
 
-    # Output list of all filenames.
-    if args.output_root:
-        with open(args.output_root + '/all_filenames.json', 'w') as fout:
-            json.dump(all_filenames, fout, indent=4)
+    if not args.output_root:
+        return all_filenames, extensions
+    with open(f'{args.output_root}/all_filenames.json', 'w') as fout:
+        json.dump(all_filenames, fout, indent=4)
 
         # Output metadata.
-        with open(args.output_root + '/metadata.json', 'w') as fout:
-            json.dump(extensions, fout, indent=4)
-    else:
-        return all_filenames, extensions
+    with open(f'{args.output_root}/metadata.json', 'w') as fout:
+        json.dump(extensions, fout, indent=4)
 
 
 if __name__ == "__main__":

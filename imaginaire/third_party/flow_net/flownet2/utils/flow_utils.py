@@ -20,7 +20,7 @@ def readFlow(fn):
     # print 'fn = %s'%(fn)
     with open(fn, 'rb') as f:
         magic = np.fromfile(f, np.float32, count=1)
-        if 202021.25 != magic:
+        if magic != 202021.25:
             print('Magic number incorrect. Invalid .flo file')
             return None
         else:
@@ -53,17 +53,16 @@ def writeFlow(filename, uv, v=None):
 
     assert(u.shape == v.shape)
     height, width = u.shape
-    f = open(filename, 'wb')
-    # write the header
-    f.write(TAG_CHAR)
-    np.array(width).astype(np.int32).tofile(f)
-    np.array(height).astype(np.int32).tofile(f)
-    # arrange into matrix form
-    tmp = np.zeros((height, width * nBands))
-    tmp[:, np.arange(width) * 2] = u
-    tmp[:, np.arange(width) * 2 + 1] = v
-    tmp.astype(np.float32).tofile(f)
-    f.close()
+    with open(filename, 'wb') as f:
+        # write the header
+        f.write(TAG_CHAR)
+        np.array(width).astype(np.int32).tofile(f)
+        np.array(height).astype(np.int32).tofile(f)
+        # arrange into matrix form
+        tmp = np.zeros((height, width * nBands))
+        tmp[:, np.arange(width) * 2] = u
+        tmp[:, np.arange(width) * 2 + 1] = v
+        tmp.astype(np.float32).tofile(f)
 
 
 # ref: https://github.com/sampepose/flownet2-tf/
@@ -75,8 +74,7 @@ def visulize_flow_file(flow_filename, save_dir=None):
     # plt.show()
     if save_dir:
         idx = flow_filename.rfind("/") + 1
-        plt.imsave(os.path.join(save_dir, "%s-vis.png" %
-                                flow_filename[idx:-4]), img)
+        plt.imsave(os.path.join(save_dir, f"{flow_filename[idx:-4]}-vis.png"), img)
 
 
 def flow2img(flow_data):
@@ -148,7 +146,7 @@ def compute_color(u, v):
     k1[k1 == ncols + 1] = 1
     f = fk - k0
 
-    for i in range(0, np.size(colorwheel, 1)):
+    for i in range(np.size(colorwheel, 1)):
         tmp = colorwheel[:, i]
         col0 = tmp[k0 - 1] / 255
         col1 = tmp[k1 - 1] / 255
@@ -180,13 +178,10 @@ def make_color_wheel():
 
     colorwheel = np.zeros([ncols, 3])
 
-    col = 0
-
     # RY
     colorwheel[0:RY, 0] = 255
     colorwheel[0:RY, 1] = np.transpose(np.floor(255 * np.arange(0, RY) / RY))
-    col += RY
-
+    col = 0 + RY
     # YG
     colorwheel[col:col + YG, 0] = 255 - \
         np.transpose(np.floor(255 * np.arange(0, YG) / YG))

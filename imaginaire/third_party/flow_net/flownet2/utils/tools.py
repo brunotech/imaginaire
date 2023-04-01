@@ -32,7 +32,7 @@ def module_to_dict(module, exclude=[]):
 
 class TimerBlock:
     def __init__(self, title):
-        print(("{}".format(title)))
+        print(f"{title}")
 
     def __enter__(self):
         self.start = time.clock()
@@ -56,9 +56,8 @@ class TimerBlock:
         print(("  [{:.3f}{}] {}".format(duration, units, string)))
 
     def log2file(self, fid, string):
-        fid = open(fid, 'a')
-        fid.write("%s\n" % (string))
-        fid.close()
+        with open(fid, 'a') as fid:
+            fid.write("%s\n" % (string))
 
 
 def add_arguments_for_module(
@@ -72,11 +71,11 @@ def add_arguments_for_module(
 
     module_dict = module_to_dict(module)
     argument_group.add_argument(
-        '--' + argument_for_class,
+        f'--{argument_for_class}',
         type=str,
         default=default,
-        choices=list(
-            module_dict.keys()))
+        choices=list(module_dict.keys()),
+    )
 
     args, unknown_args = parser.parse_known_args()
     class_obj = module_dict[vars(args)[argument_for_class]]
@@ -87,25 +86,22 @@ def add_arguments_for_module(
 
     args = argspec.args[::-1]
     for i, arg in enumerate(args):
-        cmd_arg = '{}_{}'.format(argument_for_class, arg)
+        cmd_arg = f'{argument_for_class}_{arg}'
         if arg not in skip_params + ['self', 'args']:
             if arg in list(parameter_defaults.keys()):
                 argument_group.add_argument(
-                    '--{}'.format(cmd_arg),
-                    type=type(
-                        parameter_defaults[arg]),
-                    default=parameter_defaults[arg])
+                    f'--{cmd_arg}',
+                    type=type(parameter_defaults[arg]),
+                    default=parameter_defaults[arg],
+                )
             elif (defaults is not None and i < len(defaults)):
                 argument_group.add_argument(
-                    '--{}'.format(cmd_arg),
-                    type=type(
-                        defaults[i]),
-                    default=defaults[i])
+                    f'--{cmd_arg}', type=type(defaults[i]), default=defaults[i]
+                )
             else:
-                print(("[Warning]: non-default argument '{}' "
-                       "detected on class '{}'. This argument "
-                       "cannot be modified via the command line"
-                       .format(arg, module.__class__.__name__)))
+                print(
+                    f"[Warning]: non-default argument '{arg}' detected on class '{module.__class__.__name__}'. This argument cannot be modified via the command line"
+                )
             # We don't have a good way of dealing with
             # inferring the type of the argument
             # TODO: try creating a custom action and using ast's infer type?
@@ -115,10 +111,12 @@ def add_arguments_for_module(
 
 
 def kwargs_from_args(args, argument_for_class):
-    argument_for_class = argument_for_class + '_'
-    return {key[len(argument_for_class):]: value for key, value in list(vars(
-        args).items()) if
-            argument_for_class in key and key != argument_for_class + 'class'}
+    argument_for_class = f'{argument_for_class}_'
+    return {
+        key[len(argument_for_class) :]: value
+        for key, value in list(vars(args).items())
+        if argument_for_class in key and key != f'{argument_for_class}class'
+    }
 
 
 def format_dictionary_of_losses(labels, values):
@@ -129,7 +127,7 @@ def format_dictionary_of_losses(labels, values):
                             zip(labels, values)])
     except (TypeError, ValueError) as e:
         print((list(zip(labels, values))))
-        string = '[Log Error] ' + str(e)
+        string = f'[Log Error] {str(e)}'
 
     return string
 
@@ -170,9 +168,9 @@ def gpumemusage():
     for i in range(len(all_stat) / 2):
         curr, tot = all_stat[2 * i], all_stat[2 * i + 1]
         util = "%1.2f" % (100 * curr / tot) + '%'
-        cmem = str(int(math.ceil(curr / 1024.))) + 'GB'
-        gmem = str(int(math.ceil(tot / 1024.))) + 'GB'
-        gpu_mem += util + '--' + join(cmem, gmem) + ' '
+        cmem = f'{int(math.ceil(curr / 1024.0))}GB'
+        gmem = f'{int(math.ceil(tot / 1024.0))}GB'
+        gpu_mem += f'{util}--{join(cmem, gmem)} '
     return gpu_mem
 
 
@@ -188,7 +186,7 @@ def update_hyperparameter_schedule(args, epoch, global_iteration, optimizer):
 def save_checkpoint(state, is_best, path, prefix,
                     filename='checkpoint.pth.tar'):
     prefix_save = os.path.join(path, prefix)
-    name = prefix_save + '_' + filename
+    name = f'{prefix_save}_{filename}'
     torch.save(state, name)
     if is_best:
-        shutil.copyfile(name, prefix_save + '_model_best.pth.tar')
+        shutil.copyfile(name, f'{prefix_save}_model_best.pth.tar')

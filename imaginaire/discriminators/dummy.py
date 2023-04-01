@@ -18,7 +18,6 @@ class Discriminator(nn.Module):
     def __init__(self, dis_cfg, data_cfg):
         super(Discriminator, self).__init__()
         self.dummy_layer = LinearBlock(1, 1)
-        pass
 
     def forward(self, data):
         """Dummy discriminator forward.

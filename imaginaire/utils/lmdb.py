@@ -13,7 +13,7 @@ from imaginaire.utils import path
 
 def construct_file_path(root, data_type, sequence, filename, ext):
     """Get file path for our dataset structure."""
-    return '%s/%s/%s/%s.%s' % (root, data_type, sequence, filename, ext)
+    return f'{root}/{data_type}/{sequence}/{filename}.{ext}'
 
 
 def check_and_add(filepath, key, filepaths, keys, remove_missing=False):
@@ -30,11 +30,11 @@ def check_and_add(filepath, key, filepaths, keys, remove_missing=False):
         (int): Size of file at filepath.
     """
     if not os.path.exists(filepath):
-        print(filepath + ' does not exist.')
+        print(f'{filepath} does not exist.')
         if remove_missing:
             return -1
         else:
-            raise FileNotFoundError(filepath + ' does not exist.')
+            raise FileNotFoundError(f'{filepath} does not exist.')
     filepaths.append(filepath)
     keys.append(key)
     return os.path.getsize(filepath)
@@ -85,10 +85,10 @@ def get_all_filenames_from_list(list_name):
     with open(list_name, 'rt') as f:
         lines = f.readlines()
     lines = [line.strip() for line in lines]
-    all_filenames = dict()
+    all_filenames = {}
     for line in lines:
         if '/' in line:
-            file_str = line.split('/')[0:-1]
+            file_str = line.split('/')[:-1]
             folder_name = os.path.join(*file_str)
             image_name = line.split('/')[-1].replace('.jpg', '')
         else:
@@ -153,10 +153,7 @@ def create_metadata(data_root=None, cfg=None, paired=None, input_list=''):
     assert set(required_data_types).issubset(set(available_data_types)), \
         print(set(required_data_types) - set(available_data_types), 'missing')
 
-    # Find extensions for each data type.
-    extensions = {}
-    for data_type, data_ext in zip(required_data_types, data_exts):
-        extensions[data_type] = data_ext
+    extensions = dict(zip(required_data_types, data_exts))
     print('Data file extensions:', extensions)
 
     if paired:
@@ -170,7 +167,7 @@ def create_metadata(data_root=None, cfg=None, paired=None, input_list=''):
                 search_dir = 'data_segmaps'
             else:
                 search_dir = required_data_types[0]
-            print('Searching in dir: %s' % search_dir)
+            print(f'Searching in dir: {search_dir}')
             sequences = path.get_recursive_subdirectories(
                 os.path.join(data_root, search_dir),
                 extensions[search_dir])
@@ -179,9 +176,7 @@ def create_metadata(data_root=None, cfg=None, paired=None, input_list=''):
             # Get filenames in each sequence.
             all_filenames = {}
             for sequence in sequences:
-                folder = '%s/%s/%s/*.%s' % (
-                    data_root, search_dir, sequence,
-                    extensions[search_dir])
+                folder = f'{data_root}/{search_dir}/{sequence}/*.{extensions[search_dir]}'
                 filenames = sorted(glob.glob(folder))
                 filenames = [
                     os.path.splitext(os.path.basename(filename))[0] for
@@ -201,8 +196,7 @@ def create_metadata(data_root=None, cfg=None, paired=None, input_list=''):
             # Get filenames in each sequence.
             total_filenames = 0
             for sequence in sequences:
-                folder = '%s/%s/%s/*.%s' % (
-                    data_root, data_type, sequence, extensions[data_type])
+                folder = f'{data_root}/{data_type}/{sequence}/*.{extensions[data_type]}'
                 filenames = sorted(glob.glob(folder))
                 filenames = [
                     os.path.splitext(os.path.basename(filename))[0] for

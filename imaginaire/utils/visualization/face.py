@@ -42,15 +42,24 @@ def connect_face_keypoints(resize_h, resize_w, crop_h, crop_w, original_h,
         add_upper_face = add_dist_map = add_pos_encode = False
 
     # Mapping from keypoint index to facial part.
-    part_list = [[list(range(0, 17)) + (
-        (list(range(68, 83)) + [0]) if add_upper_face else [])],  # ai_emoji
-                      [range(17, 22)],  # right eyebrow
-                      [range(22, 27)],  # left eyebrow
-                      [[28, 31], range(31, 36), [35, 28]],  # nose
-                      [[36, 37, 38, 39], [39, 40, 41, 36]],  # right eye
-                      [[42, 43, 44, 45], [45, 46, 47, 42]],  # left eye
-                      [range(48, 55), [54, 55, 56, 57, 58, 59, 48],
-                       range(60, 65), [64, 65, 66, 67, 60]],  # mouth and tongue
+    part_list = [
+        [
+            (
+                list(range(17))
+                + ((list(range(68, 83)) + [0]) if add_upper_face else [])
+            )
+        ],
+        [range(17, 22)],
+        [range(22, 27)],
+        [[28, 31], range(31, 36), [35, 28]],
+        [[36, 37, 38, 39], [39, 40, 41, 36]],
+        [[42, 43, 44, 45], [45, 46, 47, 42]],
+        [
+            range(48, 55),
+            [54, 55, 56, 57, 58, 59, 48],
+            range(60, 65),
+            [64, 65, 66, 67, 60],
+        ],
     ]
     if add_upper_face:
         pts = keypoints[:, :17, :].astype(np.int32)
@@ -137,9 +146,7 @@ def normalize_and_connect_face_keypoints(cfg, is_inference, data):
 
     def concat(prev, now, t):
         r"""Concat prev and now frames in first dimension, up to t frames."""
-        if prev is None:
-            return now
-        return np.vstack([prev, now])[-t:]
+        return now if prev is None else np.vstack([prev, now])[-t:]
 
     # Normalize face keypoints w.r.t. reference face keypoints.
     keypoints, dist_scales = \
@@ -156,7 +163,7 @@ def normalize_and_connect_face_keypoints(cfg, is_inference, data):
 
     # Store the computed params.
     if 'common_attr' not in data:
-        data['common_attr'] = dict()
+        data['common_attr'] = {}
     data['common_attr']['dist_scales'] = dist_scales
     data['common_attr']['prev_data'] = concat_keypoints
 
@@ -190,8 +197,7 @@ def smooth_face_keypoints(concat_keypoints, ks):
             kpt_max = np.maximum(kpt_cur, kpt_prev)
             kpt_cur[kpt_cur == 0] = kpt_max[kpt_cur == 0]
             filtered_keypoints[t] = kpt_cur
-    keypoints = filtered_keypoints[ks // 2: ks // 2 + 1]
-    return keypoints
+    return filtered_keypoints[ks // 2: ks // 2 + 1]
 
 
 def normalize_face_keypoints(keypoints, ref_keypoints, dist_scales=None,
@@ -363,9 +369,7 @@ def convert_face_landmarks_to_image(cfgdata, landmarks, output_size,
     labels = [torch.from_numpy(label).permute(2, 0, 1).unsqueeze(0)
               for label in labels]
     labels = torch.cat(labels)
-    if cpu_only:
-        return labels
-    return labels.cuda()
+    return labels if cpu_only else labels.cuda()
 
 
 def add_face_keypoints(label_map, image, keypoints):
@@ -398,25 +402,26 @@ def draw_edge(im, x, y, bw=1, color=(255, 255, 255), draw_end_points=False):
         color (list or tuple of int): Color to draw.
         draw_end_points (bool): Whether to draw end points of the edge.
     """
-    if x is not None and x.size:
-        h, w = im.shape[0], im.shape[1]
-        # Draw edge.
-        for i in range(-bw, bw):
-            for j in range(-bw, bw):
-                yy = np.maximum(0, np.minimum(h - 1, y + i))
-                xx = np.maximum(0, np.minimum(w - 1, x + j))
-                set_color(im, yy, xx, color)
+    if x is None or not x.size:
+        return
+    h, w = im.shape[0], im.shape[1]
+    # Draw edge.
+    for i in range(-bw, bw):
+        for j in range(-bw, bw):
+            yy = np.maximum(0, np.minimum(h - 1, y + i))
+            xx = np.maximum(0, np.minimum(w - 1, x + j))
+            set_color(im, yy, xx, color)
 
-        # Draw endpoints.
-        if draw_end_points:
-            for i in range(-bw * 2, bw * 2):
-                for j in range(-bw * 2, bw * 2):
-                    if (i ** 2) + (j ** 2) < (4 * bw ** 2):
-                        yy = np.maximum(0, np.minimum(h - 1, np.array(
-                            [y[0], y[-1]]) + i))
-                        xx = np.maximum(0, np.minimum(w - 1, np.array(
-                            [x[0], x[-1]]) + j))
-                        set_color(im, yy, xx, color)
+    # Draw endpoints.
+    if draw_end_points:
+        for i in range(-bw * 2, bw * 2):
+            for j in range(-bw * 2, bw * 2):
+                if (i ** 2) + (j ** 2) < (4 * bw ** 2):
+                    yy = np.maximum(0, np.minimum(h - 1, np.array(
+                        [y[0], y[-1]]) + i))
+                    xx = np.maximum(0, np.minimum(w - 1, np.array(
+                        [x[0], x[-1]]) + j))
+                    set_color(im, yy, xx, color)
 
 
 def set_color(im, yy, xx, color):
@@ -428,7 +433,7 @@ def set_color(im, yy, xx, color):
         yy (1D numpy array): y coordinates of the pixels.
         color (list or tuple of int): Color to draw.
     """
-    if type(color) != list and type(color) != tuple:
+    if type(color) not in [list, tuple]:
         color = [color] * 3
     if len(im.shape) == 3 and im.shape[2] == 3:
         if (im[yy, xx] == 0).all():
@@ -474,10 +479,7 @@ def interp_points(x, y):
             x = list(reversed(x))
             y = list(reversed(y))
         curve_x = np.linspace(x[0], x[-1], int(np.round(x[-1]-x[0])))
-        if len(x) < 3:
-            curve_y = linear(curve_x, *popt)
-        else:
-            curve_y = func(curve_x, *popt)
+        curve_y = linear(curve_x, *popt) if len(x) < 3 else func(curve_x, *popt)
     return curve_x.astype(int), curve_y.astype(int)
 
 

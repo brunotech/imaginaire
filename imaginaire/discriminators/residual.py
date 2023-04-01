@@ -45,9 +45,8 @@ class ResDiscriminator(nn.Module):
                  **kwargs):
         super().__init__()
         for key in kwargs:
-            if key != 'type' and key != 'patch_wise':
-                warnings.warn(
-                    "Discriminator argument {} is not used".format(key))
+            if key not in ['type', 'patch_wise']:
+                warnings.warn(f"Discriminator argument {key} is not used")
 
         conv_params = dict(padding_mode=padding_mode,
                            activation_norm_type=activation_norm_type,

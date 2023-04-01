@@ -44,8 +44,7 @@ class Discriminator(nn.Module):
             for name in self.add_dis_cfg:
                 add_dis_cfg = self.add_dis_cfg[name]
                 num_ch = num_img_channels * (2 if self.use_few_shot else 1)
-                setattr(self, 'net_D_' + name,
-                        MultiPatchDiscriminator(add_dis_cfg, num_ch))
+                setattr(self, f'net_D_{name}', MultiPatchDiscriminator(add_dis_cfg, num_ch))
 
         # Temporal discriminator.
         self.num_netDT_input_channels = num_img_channels * self.num_frames_D
@@ -75,23 +74,18 @@ class Discriminator(nn.Module):
         if self.use_few_shot:
             # Pick only one reference image to concat with.
             ref_idx = net_G_output['ref_idx'] \
-                if 'ref_idx' in net_G_output else 0
+                    if 'ref_idx' in net_G_output else 0
             ref_label = pick_image(data['ref_labels'], ref_idx)
             ref_image = pick_image(data['ref_images'], ref_idx)
             # Concat references with label map as discriminator input.
             label = torch.cat([label, ref_label, ref_image], dim=1)
         fake_image = net_G_output['fake_images']
-        output = dict()
-
         # Individual frame loss.
         pred_real, pred_fake = self.discrminate_image(self.net_D, label,
                                                       real_image, fake_image)
-        output['indv'] = dict()
-        output['indv']['pred_real'] = pred_real
-        output['indv']['pred_fake'] = pred_fake
-
+        output = {'indv': {'pred_real': pred_real, 'pred_fake': pred_fake}}
         if 'fake_raw_images' in net_G_output and \
-                net_G_output['fake_raw_images'] is not None:
+                    net_G_output['fake_raw_images'] is not None:
             # Raw generator output loss.
             fake_raw_image = net_G_output['fake_raw_images']
             fg_mask = get_fg_mask(data['label'], self.has_fg)
@@ -99,7 +93,7 @@ class Discriminator(nn.Module):
                 self.net_D, label,
                 real_image * fg_mask,
                 fake_raw_image * fg_mask)
-            output['raw'] = dict()
+            output['raw'] = {}
             output['raw']['pred_real'] = pred_real
             output['raw']['pred_fake'] = pred_fake
 
@@ -123,27 +117,27 @@ class Discriminator(nn.Module):
 
                 # Feed the crops to specific discriminator.
                 if fake_crop is not None:
-                    net_D = getattr(self, 'net_D_' + name)
+                    net_D = getattr(self, f'net_D_{name}')
                     pred_real, pred_fake = \
-                        self.discrminate_image(net_D, None,
+                            self.discrminate_image(net_D, None,
                                                real_crop, fake_crop)
                 else:
                     pred_real = pred_fake = None
-                output[name] = dict()
+                output[name] = {}
                 output[name]['pred_real'] = pred_real
                 output[name]['pred_fake'] = pred_fake
 
         # Temporal loss.
         past_frames, skipped_frames = \
-            get_all_skipped_frames(past_frames, [real_image, fake_image],
+                get_all_skipped_frames(past_frames, [real_image, fake_image],
                                    self.num_scales, self.num_frames_D)
 
         for scale in range(self.num_scales):
             real_image, fake_image = \
-                [skipped_frame[scale] for skipped_frame in skipped_frames]
+                    [skipped_frame[scale] for skipped_frame in skipped_frames]
             pred_real, pred_fake = self.discriminate_video(real_image,
                                                            fake_image, scale)
-            output['temporal_%d' % scale] = dict()
+            output['temporal_%d' % scale] = {}
             output['temporal_%d' % scale]['pred_real'] = pred_real
             output['temporal_%d' % scale]['pred_fake'] = pred_fake
 
@@ -312,7 +306,4 @@ class MultiPatchDiscriminator(nn.Module):
             input_downsampled = F.interpolate(
                 input_downsampled, scale_factor=0.5, mode='bilinear',
                 align_corners=True, recompute_scale_factor=True)
-        output_x = dict()
-        output_x['output'] = output_list
-        output_x['features'] = features_list
-        return output_x
+        return {'output': output_list, 'features': features_list}

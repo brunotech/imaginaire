@@ -66,12 +66,12 @@ class Dataset(VideoDataset):
         assert isinstance(few_shot_K, int)
         if (sequence_length + few_shot_K) > self.sequence_length_max:
             error_message = \
-                'Requested sequence length (%d) ' % (sequence_length) + \
-                '+ few shot K (%d) > ' % (few_shot_K) + \
-                'max sequence length (%d). ' % (self.sequence_length_max)
+                    'Requested sequence length (%d) ' % (sequence_length) + \
+                    '+ few shot K (%d) > ' % (few_shot_K) + \
+                    'max sequence length (%d). ' % (self.sequence_length_max)
             print(error_message)
             sequence_length = self.sequence_length_max - few_shot_K
-            print('Reduced sequence length to %s' % (sequence_length))
+            print(f'Reduced sequence length to {sequence_length}')
         self.sequence_length = sequence_length
         self.few_shot_K = few_shot_K
         # Recalculate mapping as some sequences might no longer be useful.
@@ -114,7 +114,7 @@ class Dataset(VideoDataset):
         # irrespective of length.
         if self.is_inference:
             sequence_list = []
-            for key, sequences in self.mapping.items():
+            for sequences in self.mapping.values():
                 sequence_list.extend(sequences)
             self.mapping = sequence_list
 
@@ -144,17 +144,15 @@ class Dataset(VideoDataset):
                                          self.inference_k_shot_frame_index]]
             # Prepare few shot key.
             few_shot_key = copy.deepcopy(k_shot_chosen_sequence)
-            few_shot_key['filenames'] = k_shot_chosen_filenames
-            few_shot_key['obj_indices'] = k_shot_chosen_obj_indices
         else:
             # Pick a time step for temporal augmentation.
             time_step = random.randint(1, self.augmentor.max_time_step)
             required_sequence_length = 1 + \
-                (self.sequence_length - 1) * time_step
+                    (self.sequence_length - 1) * time_step
 
             # If step is too large, default to step size of 1.
             if required_sequence_length + self.few_shot_K > \
-                    self.sequence_length_max:
+                        self.sequence_length_max:
                 required_sequence_length = self.sequence_length
                 time_step = 1
 
@@ -162,7 +160,7 @@ class Dataset(VideoDataset):
             valid_sequences = []
             for sequence_length, sequences in self.mapping.items():
                 if sequence_length >= required_sequence_length + \
-                        self.few_shot_K:
+                            self.few_shot_K:
                     valid_sequences.extend(sequences)
 
             # Pick a sequence.
@@ -170,7 +168,7 @@ class Dataset(VideoDataset):
 
             # Choose filenames.
             max_start_idx = len(chosen_sequence['filenames']) - \
-                required_sequence_length
+                    required_sequence_length
             start_idx = random.randint(0, max_start_idx)
             end_idx = start_idx + required_sequence_length
             chosen_filenames = chosen_sequence['filenames'][
@@ -180,7 +178,7 @@ class Dataset(VideoDataset):
 
             # Find the K few shot filenames.
             valid_range = list(range(start_idx)) + \
-                list(range(end_idx, len(chosen_sequence['filenames'])))
+                    list(range(end_idx, len(chosen_sequence['filenames'])))
             k_shot_chosen = sorted(random.sample(valid_range, self.few_shot_K))
             k_shot_chosen_filenames = [chosen_sequence['filenames'][idx]
                                        for idx in k_shot_chosen]
@@ -193,9 +191,8 @@ class Dataset(VideoDataset):
 
             # Prepare few shot key.
             few_shot_key = copy.deepcopy(chosen_sequence)
-            few_shot_key['filenames'] = k_shot_chosen_filenames
-            few_shot_key['obj_indices'] = k_shot_chosen_obj_indices
-
+        few_shot_key['filenames'] = k_shot_chosen_filenames
+        few_shot_key['obj_indices'] = k_shot_chosen_obj_indices
         # Prepre output key.
         key = copy.deepcopy(chosen_sequence)
         key['filenames'] = chosen_filenames
@@ -239,7 +236,7 @@ class Dataset(VideoDataset):
         # Create copy of keypoint data types before post aug.
         kp_data = {}
         for data_type in self.keypoint_data_types:
-            new_key = data_type + '_xy'
+            new_key = f'{data_type}_xy'
             kp_data[new_key] = copy.deepcopy(data[data_type])
 
         # Apply ops post augmentation.
@@ -292,20 +289,18 @@ class Dataset(VideoDataset):
 
         # Add few shot data into data.
         for key, value in few_shot_data.items():
-            data['few_shot_' + key] = few_shot_data[key]
+            data[f'few_shot_{key}'] = few_shot_data[key]
 
-        # Apply full data ops.
-        if self.is_inference:
-            if index == 0:
-                pass
-            elif index < self.cfg.data.num_workers:
+        if index == 0:
+            pass
+        elif index < self.cfg.data.num_workers:
+            if self.is_inference:
                 data_0 = self._getitem(0)
                 if 'common_attr' in data_0:
                     self.common_attr = data['common_attr'] = \
-                        data_0['common_attr']
-            else:
-                if hasattr(self, 'common_attr'):
-                    data['common_attr'] = self.common_attr
+                            data_0['common_attr']
+        elif self.is_inference and hasattr(self, 'common_attr'):
+            data['common_attr'] = self.common_attr
 
         data = self.apply_ops(data, self.full_data_ops, full_data=True)
 

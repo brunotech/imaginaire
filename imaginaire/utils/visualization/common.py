@@ -88,7 +88,7 @@ def tensor2im(image_tensor, imtype=np.uint8, normalize=True,
         return None
     if isinstance(image_tensor, list):
         return [tensor2im(x, imtype, normalize) for x in image_tensor]
-    if image_tensor.dim() == 5 or image_tensor.dim() == 4:
+    if image_tensor.dim() in [5, 4]:
         return [tensor2im(image_tensor[idx], imtype, normalize)
                 for idx in range(image_tensor.size(0))]
 
@@ -127,7 +127,7 @@ def tensor2label(segmap, n_label=None, imtype=np.uint8,
         return [tensor2label(x, n_label,
                              imtype, colorize,
                              output_normalized_tensor) for x in segmap]
-    if segmap.dim() == 5 or segmap.dim() == 4:
+    if segmap.dim() in [5, 4]:
         return [tensor2label(segmap[idx], n_label,
                              imtype, colorize,
                              output_normalized_tensor)
@@ -168,10 +168,8 @@ def tensor2flow(tensor, imtype=np.uint8):
         return None
     if isinstance(tensor, list):
         tensor = [t for t in tensor if t is not None]
-        if not tensor:
-            return None
-        return [tensor2flow(t, imtype) for t in tensor]
-    if tensor.dim() == 5 or tensor.dim() == 4:
+        return [tensor2flow(t, imtype) for t in tensor] if tensor else None
+    if tensor.dim() in [5, 4]:
         return [tensor2flow(tensor[b]) for b in range(tensor.size(0))]
 
     tensor = tensor.detach().cpu().float().numpy()
@@ -183,8 +181,7 @@ def tensor2flow(tensor, imtype=np.uint8):
     mag, ang = cv2.cartToPolar(tensor[..., 0], tensor[..., 1])
     hsv[..., 0] = ang * 180 / np.pi / 2
     hsv[..., 2] = cv2.normalize(mag, None, 0, 255, cv2.NORM_MINMAX)
-    rgb = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
-    return rgb
+    return cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
 
 
 def plot_keypoints(image, keypoints, normalize=True):
@@ -201,7 +198,7 @@ def plot_keypoints(image, keypoints, normalize=True):
         image = tensor2im(image, normalize=normalize)
     if isinstance(image, np.ndarray):
         assert image.ndim == 3
-        assert image.shape[-1] == 1 or image.shape[-1] == 3
+        assert image.shape[-1] in [1, 3]
     if isinstance(keypoints, torch.Tensor):
         keypoints = keypoints.cpu().numpy()
     assert keypoints.ndim == 2 and keypoints.shape[1] == 2
@@ -271,7 +268,7 @@ class Colorize(object):
         """
         size = seg_map.size()
         color_image = torch.ByteTensor(3, size[1], size[2]).fill_(0)
-        for label in range(0, len(self.cmap)):
+        for label in range(len(self.cmap)):
             mask = (label == seg_map[0]).cpu()
             color_image[0][mask] = self.cmap[label][0]
             color_image[1][mask] = self.cmap[label][1]

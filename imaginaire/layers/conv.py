@@ -93,25 +93,29 @@ class _BaseConvBlock(nn.Module):
     def _get_conv_layer(self, in_channels, out_channels, kernel_size, stride,
                         padding, dilation, groups, bias, padding_mode,
                         input_dim):
-        # Returns the convolutional layer.
         if input_dim == 0:
-            layer = nn.Linear(in_channels, out_channels, bias)
-        else:
-            layer_type = getattr(nn, 'Conv%dd' % input_dim)
-            layer = layer_type(
-                in_channels, out_channels, kernel_size, stride, padding,
-                dilation, groups, bias, padding_mode)
-        return layer
+            return nn.Linear(in_channels, out_channels, bias)
+        layer_type = getattr(nn, 'Conv%dd' % input_dim)
+        return layer_type(
+            in_channels,
+            out_channels,
+            kernel_size,
+            stride,
+            padding,
+            dilation,
+            groups,
+            bias,
+            padding_mode,
+        )
 
     def __repr__(self):
-        main_str = self._get_name() + '('
+        main_str = f'{self._get_name()}('
         child_lines = []
         for name, layer in self.layers.items():
             mod_str = repr(layer)
             if name == 'conv' and self.weight_norm_type != 'none' and \
-                    self.weight_norm_type != '':
-                mod_str = mod_str[:-1] + \
-                    ', weight_norm={}'.format(self.weight_norm_type) + ')'
+                        self.weight_norm_type != '':
+                mod_str = f'{mod_str[:-1]}, weight_norm={self.weight_norm_type})'
             mod_str = self._addindent(mod_str, 2)
             child_lines.append(mod_str)
         if len(child_lines) == 1:
@@ -131,8 +135,7 @@ class _BaseConvBlock(nn.Module):
         first = s.pop(0)
         s = [(numSpaces * ' ') + line for line in s]
         s = '\n'.join(s)
-        s = first + '\n' + s
-        return s
+        return first + '\n' + s
 
 
 class LinearBlock(_BaseConvBlock):
@@ -413,7 +416,7 @@ class _BaseHyperConvBlock(_BaseConvBlock):
         if is_hyper_conv:
             weight_norm_type = 'none'
         if is_hyper_norm:
-            activation_norm_type = 'hyper_' + activation_norm_type
+            activation_norm_type = f'hyper_{activation_norm_type}'
         super().__init__(in_channels, out_channels, kernel_size, stride,
                          padding, dilation, groups, bias, padding_mode,
                          weight_norm_type, weight_norm_params,
@@ -426,13 +429,19 @@ class _BaseHyperConvBlock(_BaseConvBlock):
                         input_dim):
         if input_dim == 0:
             raise ValueError('HyperLinearBlock is not supported.')
-        else:
-            name = 'HyperConv' if self.is_hyper_conv else 'nn.Conv'
-            layer_type = eval(name + '%dd' % input_dim)
-            layer = layer_type(
-                in_channels, out_channels, kernel_size, stride, padding,
-                dilation, groups, bias, padding_mode)
-        return layer
+        name = 'HyperConv' if self.is_hyper_conv else 'nn.Conv'
+        layer_type = eval(name + '%dd' % input_dim)
+        return layer_type(
+            in_channels,
+            out_channels,
+            kernel_size,
+            stride,
+            padding,
+            dilation,
+            groups,
+            bias,
+            padding_mode,
+        )
 
 
 class HyperConv2dBlock(_BaseHyperConvBlock):
@@ -621,11 +630,19 @@ class _BasePartialConvBlock(_BaseConvBlock):
             layer_type = PartialConv3d
         else:
             raise ValueError('Partial conv only supports 2D and 3D conv now.')
-        layer = layer_type(
-            in_channels, out_channels, kernel_size, stride, padding,
-            dilation, groups, bias, padding_mode,
-            multi_channel=self.multi_channel, return_mask=self.return_mask)
-        return layer
+        return layer_type(
+            in_channels,
+            out_channels,
+            kernel_size,
+            stride,
+            padding,
+            dilation,
+            groups,
+            bias,
+            padding_mode,
+            multi_channel=self.multi_channel,
+            return_mask=self.return_mask,
+        )
 
     def forward(self, x, *cond_inputs, mask_in=None, **kw_cond_inputs):
         r"""
@@ -652,9 +669,7 @@ class _BasePartialConvBlock(_BaseConvBlock):
             else:
                 x = layer(x)
 
-        if mask_out is not None:
-            return x, mask_out
-        return x
+        return (x, mask_out) if mask_out is not None else x
 
 
 class PartialConv2dBlock(_BasePartialConvBlock):
@@ -1003,10 +1018,7 @@ class PartialConv2d(nn.Conv2d):
         else:
             output = torch.mul(raw_out, self.mask_ratio)
 
-        if self.return_mask:
-            return output, self.update_mask
-        else:
-            return output
+        return (output, self.update_mask) if self.return_mask else output
 
 
 class PartialConv3d(nn.Conv3d):
@@ -1066,7 +1078,4 @@ class PartialConv3d(nn.Conv3d):
         else:
             output = torch.mul(raw_out, mask_ratio)
 
-        if self.return_mask:
-            return output, update_mask
-        else:
-            return output
+        return (output, update_mask) if self.return_mask else output

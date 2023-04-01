@@ -48,10 +48,7 @@ class Trainer(BaseTrainer):
         super(Trainer, self).__init__(cfg, net_G, net_D, opt_G,
                                       opt_D, sch_G, sch_D,
                                       train_data_loader, val_data_loader)
-        if cfg.data.type == 'imaginaire.datasets.paired_videos':
-            self.video_mode = True
-        else:
-            self.video_mode = False
+        self.video_mode = cfg.data.type == 'imaginaire.datasets.paired_videos'
 
     def _init_loss(self, cfg):
         r"""Initialize loss terms.
@@ -223,7 +220,7 @@ class Trainer(BaseTrainer):
         if not self.cfg.trainer.model_average:
             return
         model_average_iteration = \
-            self.cfg.trainer.model_average_batch_norm_estimation_iteration
+                self.cfg.trainer.model_average_batch_norm_estimation_iteration
         if model_average_iteration == 0:
             return
         with torch.no_grad():
@@ -233,8 +230,9 @@ class Trainer(BaseTrainer):
             self.net_G.module.averaged_model.apply(reset_batch_norm)
             for cal_it, cal_data in enumerate(data_loader):
                 if cal_it >= model_average_iteration:
-                    print('Done with {} iterations of updating batch norm '
-                          'statistics'.format(model_average_iteration))
+                    print(
+                        f'Done with {model_average_iteration} iterations of updating batch norm statistics'
+                    )
                     break
                 # cal_data = to_device(cal_data, 'cuda')
                 cal_data = self._start_of_iteration(cal_data, 0)

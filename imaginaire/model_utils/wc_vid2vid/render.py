@@ -40,11 +40,7 @@ class SplatRenderer(object):
         Args:
             max_point_idx (int): Highest 3D point index seen so far.
         """
-        if self.colors is None:
-            old_max_point_idx = 0
-        else:
-            old_max_point_idx = self.colors.shape[0]
-
+        old_max_point_idx = 0 if self.colors is None else self.colors.shape[0]
         if max_point_idx > old_max_point_idx:
             # Init new bigger arrays.
             colors = np.zeros((max_point_idx, 3), dtype=np.uint8)
@@ -116,11 +112,7 @@ class SplatRenderer(object):
         mask = np.zeros((h, w, 1), dtype=np.uint8)
 
         if point_info is None or len(point_info) == 0:
-            if return_mask:
-                return output, mask
-            else:
-                return output
-
+            return (output, mask) if return_mask else output
         start = time.time()
 
         i_idxs = point_info[:, 0]
@@ -166,10 +158,7 @@ def decode_unprojections(data):
             if resolution not in all_unprojections:
                 all_unprojections[resolution] = []
 
-            if not value or value is None:
-                point_info = []
-            else:
-                point_info = value
+            point_info = [] if not value or value is None else value
             all_unprojections[resolution].append(point_info)
 
     outputs = {}

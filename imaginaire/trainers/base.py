@@ -72,15 +72,15 @@ class BaseTrainer(object):
         # Mapping from loss names to criterion modules.
         self.criteria = nn.ModuleDict()
         # Mapping from loss names to loss weights.
-        self.weights = dict()
-        self.losses = dict(gen_update=dict(), dis_update=dict())
+        self.weights = {}
+        self.losses = dict(gen_update={}, dis_update={})
         self.gen_losses = self.losses['gen_update']
         self.dis_losses = self.losses['dis_update']
         self._init_loss(cfg)
         for loss_name, loss_weight in self.weights.items():
             print("Loss {:<20} Weight {}".format(loss_name, loss_weight))
             if loss_name in self.criteria.keys() and \
-                    self.criteria[loss_name] is not None:
+                        self.criteria[loss_name] is not None:
                 self.criteria[loss_name].to('cuda')
 
         if self.is_inference:
@@ -161,9 +161,9 @@ class BaseTrainer(object):
         r"""Write all loss values to tensorboard."""
         for update, losses in self.losses.items():
             # update is 'gen_update' or 'dis_update'.
-            assert update == 'gen_update' or update == 'dis_update'
+            assert update in ['gen_update', 'dis_update']
             for loss_name, loss in losses.items():
-                full_loss_name = update + '/' + loss_name
+                full_loss_name = f'{update}/{loss_name}'
                 if full_loss_name not in self.meters.keys():
                     # Create a new meter if it doesn't exist.
                     self.meters[full_loss_name] = Meter(full_loss_name)
@@ -251,7 +251,7 @@ class BaseTrainer(object):
                     self.sch_D.load_state_dict(checkpoint['sch_D'])
                     current_epoch = checkpoint['current_epoch']
                     current_iteration = checkpoint['current_iteration']
-                    print('Load from: {}'.format(checkpoint_path))
+                    print(f'Load from: {checkpoint_path}')
                 else:
                     print('Load network weights only.')
         else:
@@ -420,7 +420,7 @@ class BaseTrainer(object):
         if not self.cfg.trainer.model_average:
             return
         model_average_iteration = \
-            self.cfg.trainer.model_average_batch_norm_estimation_iteration
+                self.cfg.trainer.model_average_batch_norm_estimation_iteration
         if model_average_iteration == 0:
             return
         with torch.no_grad():
@@ -430,8 +430,9 @@ class BaseTrainer(object):
             self.net_G.module.averaged_model.apply(reset_batch_norm)
             for cal_it, cal_data in enumerate(data_loader):
                 if cal_it >= model_average_iteration:
-                    print('Done with {} iterations of updating batch norm '
-                          'statistics'.format(model_average_iteration))
+                    print(
+                        f'Done with {model_average_iteration} iterations of updating batch norm statistics'
+                    )
                     break
                 cal_data = to_device(cal_data, 'cuda')
                 # Averaging over all batches
@@ -451,7 +452,7 @@ class BaseTrainer(object):
         if is_master() and vis_images is not None:
             vis_images = torch.cat(vis_images, dim=3).float()
             vis_images = (vis_images + 1) / 2
-            print('Save output images to {}'.format(path))
+            print(f'Save output images to {path}')
             vis_images.clamp_(0, 1)
             os.makedirs(os.path.dirname(path), exist_ok=True)
             image_grid = torchvision.utils.make_grid(
@@ -509,27 +510,25 @@ class BaseTrainer(object):
                 a: list of tensors or tensor
                 b: list of tensors or tensor
             """
-            out = list()
+            out = []
             for x, y in zip(a, b):
-                if isinstance(x, list):
-                    res = _get_difference(x, y)
-                else:
-                    res = x - y
+                res = _get_difference(x, y) if isinstance(x, list) else x - y
                 out.append(res)
             return out
 
         if real:
-            if self.cfg.trainer.gan_relativistic:
-                return _get_difference(net_D_output['real_outputs'],
-                                       net_D_output['fake_outputs'])
-            else:
-                return net_D_output['real_outputs']
+            return (
+                _get_difference(
+                    net_D_output['real_outputs'], net_D_output['fake_outputs']
+                )
+                if self.cfg.trainer.gan_relativistic
+                else net_D_output['real_outputs']
+            )
+        if self.cfg.trainer.gan_relativistic:
+            return _get_difference(net_D_output['fake_outputs'],
+                                   net_D_output['real_outputs'])
         else:
-            if self.cfg.trainer.gan_relativistic:
-                return _get_difference(net_D_output['fake_outputs'],
-                                       net_D_output['real_outputs'])
-            else:
-                return net_D_output['fake_outputs']
+            return net_D_output['fake_outputs']
 
     def _start_of_epoch(self, current_epoch):
         r"""Operations to do before starting an epoch.
@@ -680,13 +679,13 @@ class BaseTrainer(object):
         net_G.eval()
 
         print('# of samples %d' % len(data_loader))
-        for it, data in enumerate(tqdm(data_loader)):
+        for data in tqdm(data_loader):
             data = self.start_of_iteration(data, current_iteration=-1)
             with torch.no_grad():
                 output_images, file_names = \
-                    net_G.inference(data, **vars(inference_args))
+                        net_G.inference(data, **vars(inference_args))
             for output_image, file_name in zip(output_images, file_names):
-                fullname = os.path.join(output_dir, file_name + '.jpg')
+                fullname = os.path.join(output_dir, f'{file_name}.jpg')
                 output_image = tensor2pilimage(output_image.clamp_(-1, 1),
                                                minus1to1_normalized=True)
                 save_pilimage_in_jpeg(fullname, output_image)
@@ -820,6 +819,6 @@ def _save_checkpoint(cfg,
     )
     fn = os.path.join(cfg.logdir, 'latest_checkpoint.txt')
     with open(fn, 'wt') as f:
-        f.write('latest_checkpoint: %s' % latest_checkpoint_path)
-    print('Save checkpoint to {}'.format(save_path))
+        f.write(f'latest_checkpoint: {latest_checkpoint_path}')
+    print(f'Save checkpoint to {save_path}')
     return save_path

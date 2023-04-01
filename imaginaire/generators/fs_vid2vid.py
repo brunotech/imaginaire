@@ -148,11 +148,11 @@ class Generator(nn.Module):
 
         # Weight generation.
         x, encoded_label, conv_weights, norm_weights, atn, atn_vis, ref_idx = \
-            self.weight_generator(ref_images, ref_labels, label, is_first_frame)
+                self.weight_generator(ref_images, ref_labels, label, is_first_frame)
 
         # Flow estimation.
         flow, flow_mask, img_warp, cond_inputs = \
-            self.flow_generation(label, ref_labels, ref_images,
+                self.flow_generation(label, ref_labels, ref_images,
                                  prev_labels, prev_images, ref_idx)
 
         for i in range(len(encoded_label)):
@@ -189,15 +189,15 @@ class Generator(nn.Module):
             img_raw = None
         img_final = torch.tanh(self.conv_img(x))
 
-        output = dict()
-        output['fake_images'] = img_final
-        output['fake_flow_maps'] = flow
-        output['fake_occlusion_masks'] = flow_mask
-        output['fake_raw_images'] = img_raw
-        output['warped_images'] = img_warp
-        output['attention_visualization'] = atn_vis
-        output['ref_idx'] = ref_idx
-        return output
+        return {
+            'fake_images': img_final,
+            'fake_flow_maps': flow,
+            'fake_occlusion_masks': flow_mask,
+            'fake_raw_images': img_raw,
+            'warped_images': img_warp,
+            'attention_visualization': atn_vis,
+            'ref_idx': ref_idx,
+        }
 
     def one_up_conv_layer(self, x, encoded_label, conv_weight, norm_weight, i):
         r"""One residual block layer in the main branch.
@@ -211,7 +211,7 @@ class Generator(nn.Module):
         Returns:
             x (4D tensor) : Output feature map.
         """
-        layer = getattr(self, 'up_' + str(i))
+        layer = getattr(self, f'up_{str(i)}')
         x = layer(x, *encoded_label[i], conv_weights=conv_weight,
                   norm_weights=norm_weight)
         if i != 0:

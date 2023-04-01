@@ -37,12 +37,12 @@ class PerceptualLoss(nn.Module):
             layers = [layers]
         if weights is None:
             weights = [1.] * len(layers)
-        elif isinstance(layers, float) or isinstance(layers, int):
+        elif isinstance(layers, (float, int)):
             weights = [weights]
 
-        assert len(layers) == len(weights), \
-            'The number of layers (%s) must be equal to ' \
-            'the number of weights (%s).' % (len(layers), len(weights))
+        assert len(layers) == len(
+            weights
+        ), f'The number of layers ({len(layers)}) must be equal to the number of weights ({len(weights)}).'
         if network == 'vgg19':
             self.model = _vgg19(layers)
         elif network == 'vgg16':
@@ -58,23 +58,23 @@ class PerceptualLoss(nn.Module):
         elif network == 'vgg_face_dag':
             self.model = _vgg_face_dag(layers)
         else:
-            raise ValueError('Network %s is not recognized' % network)
+            raise ValueError(f'Network {network} is not recognized')
 
         self.num_scales = num_scales
         self.layers = layers
         self.weights = weights
         if criterion == 'l1':
             self.criterion = nn.L1Loss()
-        elif criterion == 'l2' or criterion == 'mse':
+        elif criterion in ['l2', 'mse']:
             self.criterion = nn.MSELoss()
         else:
-            raise ValueError('Criterion %s is not recognized' % criterion)
+            raise ValueError(f'Criterion {criterion} is not recognized')
         self.resize = resize
         self.resize_mode = resize_mode
-        self.instance_normalized = instance_normalized
         self.fp16 = cfg.trainer.amp == 'O1'
+        self.instance_normalized = instance_normalized
         print('Perceptual loss:')
-        print('\tMode: {}'.format(network))
+        print(f'\tMode: {network}')
         if self.fp16:
             print('\tPerceptual loss is evaluated in the fp16 mode.')
             self.model.half()
@@ -277,10 +277,11 @@ def _robust_resnet50(layers):
     resnet50 = torchvision.models.resnet50(pretrained=False)
     state_dict = torch.utils.model_zoo.load_url(
         'http://andrewilyas.com/ImageNet.pt')
-    new_state_dict = {}
-    for k, v in state_dict['model'].items():
-        if k.startswith('module.model.'):
-            new_state_dict[k[13:]] = v
+    new_state_dict = {
+        k[13:]: v
+        for k, v in state_dict['model'].items()
+        if k.startswith('module.model.')
+    }
     resnet50.load_state_dict(new_state_dict)
     network = nn.Sequential(resnet50.conv1,
                             resnet50.bn1,
@@ -320,20 +321,16 @@ def _vgg_face_dag(layers):
         28: 'conv5_3'}
     new_state_dict = {}
     for k, v in feature_layer_name_mapping.items():
-        new_state_dict['features.' + str(k) + '.weight'] =\
-            state_dict[v + '.weight']
-        new_state_dict['features.' + str(k) + '.bias'] = \
-            state_dict[v + '.bias']
+        new_state_dict[f'features.{str(k)}.weight'] = state_dict[f'{v}.weight']
+        new_state_dict[f'features.{str(k)}.bias'] = state_dict[f'{v}.bias']
 
     classifier_layer_name_mapping = {
         0: 'fc6',
         3: 'fc7',
         6: 'fc8'}
     for k, v in classifier_layer_name_mapping.items():
-        new_state_dict['classifier.' + str(k) + '.weight'] = \
-            state_dict[v + '.weight']
-        new_state_dict['classifier.' + str(k) + '.bias'] = \
-            state_dict[v + '.bias']
+        new_state_dict[f'classifier.{str(k)}.weight'] = state_dict[f'{v}.weight']
+        new_state_dict[f'classifier.{str(k)}.bias'] = state_dict[f'{v}.bias']
 
     network.load_state_dict(new_state_dict)
 

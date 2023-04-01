@@ -37,10 +37,7 @@ def cluster_features(cfg, train_data_loader, net_E,
     label_nc = get_paired_input_label_channel_number(cfg.data)
     feat_nc = cfg.gen.enc.num_feat_channels
     n_clusters = getattr(cfg.gen.enc, 'num_clusters', 10)
-    # Compute features.
-    features = {}
-    for label in range(label_nc):
-        features[label] = np.zeros((0, feat_nc + 1))
+    features = {label: np.zeros((0, feat_nc + 1)) for label in range(label_nc)}
     for data in train_data_loader:
         if preprocess is not None:
             data = preprocess(data)
@@ -94,13 +91,7 @@ def encode_features(net_E, feat_nc, label_nc, image, inst,
     feat_map = net_E(image, inst)
     feature_map_gather = dist_all_gather_tensor(feat_map)
     inst_gathered = dist_all_gather_tensor(inst)
-    # Initialize the cluster centers.
-    # For each feature vector,
-    #   0:feat_nc will be the feature vector.
-    #   The feat_nc dimension record the percentage of the instance.
-    feature = {}
-    for i in range(label_nc):
-        feature[i] = np.zeros((0, feat_nc + 1))
+    feature = {i: np.zeros((0, feat_nc + 1)) for i in range(label_nc)}
     if is_master():
         all_feat_map = torch.cat(feature_map_gather, 0)
         all_inst_map = torch.cat(inst_gathered, 0)
@@ -129,9 +120,7 @@ def encode_features(net_E, feat_nc, label_nc, image, inst,
                         idx[0], idx[1] + k, idx[2], idx[3]].item()
                 val[0, feat_nc] = float(num) / (fh * fw)
                 feature[label] = np.append(feature[label], val, axis=0)
-        return feature
-    else:
-        return feature
+    return feature
 
 
 def get_edges(t):

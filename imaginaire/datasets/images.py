@@ -27,8 +27,9 @@ class Dataset(BaseDataset):
             class_idx (int): Which class idx to sample from.
         """
         self.sample_class_idx = class_idx
-        self.epoch_length = \
-            max([len(lmdb_keys) for _, lmdb_keys in self.mapping.items()])
+        self.epoch_length = max(
+            len(lmdb_keys) for _, lmdb_keys in self.mapping.items()
+        )
 
     def _create_mapping(self):
         r"""Creates mapping from idx to key in LMDB.
@@ -57,8 +58,9 @@ class Dataset(BaseDataset):
                         })
                     class_names[data_type].append(class_name)
         self.mapping = idx_to_key
-        self.epoch_length = max([len(lmdb_keys)
-                                 for _, lmdb_keys in self.mapping.items()])
+        self.epoch_length = max(
+            len(lmdb_keys) for _, lmdb_keys in self.mapping.items()
+        )
 
         # Create mapping from class name to class idx.
         self.class_name_to_idx = {}
@@ -72,7 +74,7 @@ class Dataset(BaseDataset):
         for data_type in self.mapping:
             for key in self.mapping[data_type]:
                 key['class_idx'] = \
-                    self.class_name_to_idx[data_type][key['class_name']]
+                        self.class_name_to_idx[data_type][key['class_name']]
 
         # Create a mapping from index to lmdb key for each class.
         idx_to_key_class = {}
@@ -100,11 +102,10 @@ class Dataset(BaseDataset):
         """
 
         keys = {}
+        lmdb_keys = self.mapping['images']
         if self.is_inference:  # evaluation mode
-            lmdb_keys = self.mapping['images']
             keys['images'] = lmdb_keys[index % len(lmdb_keys)]
         else:
-            lmdb_keys = self.mapping['images']
             keys['images'] = random.choice(lmdb_keys)
         return keys
 
@@ -120,11 +121,10 @@ class Dataset(BaseDataset):
         # Select a sample from the available data.
         keys_per_data_type = self._sample_keys(index)
 
-        # Get class idx into a list.
-        class_idxs = []
-        for data_type in keys_per_data_type:
-            class_idxs.append(keys_per_data_type[data_type]['class_idx'])
-
+        class_idxs = [
+            keys_per_data_type[data_type]['class_idx']
+            for data_type in keys_per_data_type
+        ]
         # Get keys and lmdbs.
         keys, lmdbs = {}, {}
         for data_type in self.dataset_data_types:
@@ -132,7 +132,7 @@ class Dataset(BaseDataset):
             lmdb_idx = keys_per_data_type[data_type]['lmdb_idx']
             sequence_name = keys_per_data_type[data_type]['sequence_name']
             filename = keys_per_data_type[data_type]['filename']
-            keys[data_type] = '%s/%s' % (sequence_name, filename)
+            keys[data_type] = f'{sequence_name}/{filename}'
             lmdbs[data_type] = self.lmdbs[data_type][lmdb_idx]
 
         # Load all data for this index.

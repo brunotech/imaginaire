@@ -79,7 +79,7 @@ def get_weight_norm_layer(norm_type, **norm_params):
         norm_params: Arbitrary keyword arguments that will be used to
             initialize the weight normalization.
     """
-    if norm_type == 'none' or norm_type == '':  # no normalization
+    if norm_type in ['none', '']:  # no normalization
         return lambda x: x
     elif norm_type == 'spectral':  # spectral normalization
         return functools.partial(spectral_norm, **norm_params)
@@ -88,5 +88,4 @@ def get_weight_norm_layer(norm_type, **norm_params):
     elif norm_type == 'weight_demod':  # weight demodulation
         return functools.partial(weight_demod, **norm_params)
     else:
-        raise ValueError(
-            'Weight norm layer %s is not recognized' % norm_type)
+        raise ValueError(f'Weight norm layer {norm_type} is not recognized')

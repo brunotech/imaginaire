@@ -92,7 +92,7 @@ class Correlation(Module):
 
     def forward(self, input1, input2):
 
-        result = CorrelationFunction.apply(
+        return CorrelationFunction.apply(
             self.pad_size,
             self.kernel_size,
             self.max_displacement,
@@ -100,6 +100,5 @@ class Correlation(Module):
             self.stride2,
             self.corr_multiply,
             input1,
-            input2)
-
-        return result
+            input2,
+        )

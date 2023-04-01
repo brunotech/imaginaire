@@ -102,8 +102,7 @@ class AdaptiveNorm(nn.Module):
                 y = y.unsqueeze(-1)
             gamma, beta = y.chunk(2, 1)
         x = self.norm(x) if self.norm is not None else x
-        out = x * (1 + gamma) + beta
-        return out
+        return x * (1 + gamma) + beta
 
 
 class SpatiallyAdaptiveNorm(nn.Module):
@@ -276,9 +275,9 @@ class HyperSpatiallyAdaptiveNorm(nn.Module):
                                     padding=padding,
                                     weight_norm_type=weight_norm_type)]
                 mlp = nn.Sequential(*mlp)
+            elif num_filters > 0:
+                raise ValueError('Multi hyper layer not supported yet.')
             else:
-                if num_filters > 0:
-                    raise ValueError('Multi hyper layer not supported yet.')
                 mlp = HyperConv2d(padding=padding)
             self.mlps.append(mlp)
 
@@ -391,7 +390,7 @@ def get_activation_norm_layer(num_features, norm_type,
     """
     input_dim = max(input_dim, 1)  # Norm1d works with both 0d and 1d inputs
 
-    if norm_type == 'none' or norm_type == '':
+    if norm_type in ['none', '']:
         norm_layer = None
     elif norm_type == 'batch':
         norm = getattr(nn, 'BatchNorm%dd' % input_dim)

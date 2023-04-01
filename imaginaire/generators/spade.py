@@ -36,7 +36,7 @@ class Generator(nn.Module):
         num_labels = get_paired_input_label_channel_number(data_cfg)
         crop_h, crop_w = get_crop_h_w(data_cfg.train.augmentations)
         # Build the generator
-        out_image_small_side_size = crop_w if crop_w < crop_h else crop_h
+        out_image_small_side_size = min(crop_w, crop_h)
         num_filters = getattr(gen_cfg, 'num_filters', 128)
         kernel_size = getattr(gen_cfg, 'kernel_size', 3)
         weight_norm_type = getattr(gen_cfg, 'weight_norm_type', 'spectral')
@@ -59,17 +59,14 @@ class Generator(nn.Module):
         else:
             self.use_attribute = False
 
-        if not self.use_style and not self.use_attribute:
-            self.use_style_encoder = False
-        else:
-            self.use_style_encoder = True
+        self.use_style_encoder = self.use_style or self.use_attribute
         print('\tBase filter number: %d' % num_filters)
         print('\tConvolution kernel size: %d' % kernel_size)
         print('\tWeight norm type: %s' % weight_norm_type)
         skip_activation_norm = \
-            getattr(gen_cfg, 'skip_activation_norm', True)
+                getattr(gen_cfg, 'skip_activation_norm', True)
         activation_norm_params = \
-            getattr(gen_cfg, 'activation_norm_params', None)
+                getattr(gen_cfg, 'activation_norm_params', None)
         if activation_norm_params is None:
             activation_norm_params = types.SimpleNamespace()
         if not hasattr(activation_norm_params, 'num_filters'):
@@ -83,7 +80,7 @@ class Generator(nn.Module):
             setattr(activation_norm_params, 'separate_projection', False)
         if not hasattr(activation_norm_params, 'activation_norm_params'):
             activation_norm_params.activation_norm_params = \
-                types.SimpleNamespace()
+                    types.SimpleNamespace()
             activation_norm_params.activation_norm_params.affine = True
         setattr(activation_norm_params, 'cond_dims', num_labels)
         if not hasattr(activation_norm_params, 'weight_norm_type'):
@@ -254,7 +251,7 @@ class SPADEGenerator(nn.Module):
         nonlinearity = 'leakyrelu'
         activation_norm_type = 'spatially_adaptive'
         base_res2d_block = \
-            functools.partial(Res2dBlock,
+                functools.partial(Res2dBlock,
                               kernel_size=kernel_size,
                               padding=padding,
                               bias=[True, True, False],
@@ -288,11 +285,11 @@ class SPADEGenerator(nn.Module):
                 setattr(adaptive_norm_params, 'separate_projection',
                         activation_norm_params.separate_projection)
             adaptive_norm_params.activation_norm_params = \
-                types.SimpleNamespace()
+                    types.SimpleNamespace()
             setattr(adaptive_norm_params.activation_norm_params, 'affine',
                     activation_norm_params.activation_norm_params.affine)
             base_cbn2d_block = \
-                functools.partial(Conv2dBlock,
+                    functools.partial(Conv2dBlock,
                                   kernel_size=kernel_size,
                                   stride=1,
                                   padding=padding,
@@ -304,7 +301,7 @@ class SPADEGenerator(nn.Module):
                                   order='NAC')
         else:
             base_conv2d_block = \
-                functools.partial(Conv2dBlock,
+                    functools.partial(Conv2dBlock,
                                   kernel_size=kernel_size,
                                   stride=1,
                                   padding=padding,
@@ -383,9 +380,7 @@ class SPADEGenerator(nn.Module):
                                             nonlinearity=nonlinearity,
                                             order='ANC')
             self.base = 64
-        if self.out_image_small_side_size != 256 and \
-                self.out_image_small_side_size != \
-                512 and self.out_image_small_side_size != 1024:
+        if self.out_image_small_side_size not in [256, 512, 1024]:
             raise ValueError('Generation image size (%d, %d) not supported' %
                              (self.out_image_small_side_size,
                               self.out_image_small_side_size))
@@ -428,35 +423,23 @@ class SPADEGenerator(nn.Module):
             in_seg_xy = in_seg
         # 16x16
         x = self.head_0(in_seg_xy)
-        if self.use_style_encoder:
-            x = self.cbn_head_0(x, z)
-        else:
-            x = self.conv_head_0(x)
+        x = self.cbn_head_0(x, z) if self.use_style_encoder else self.conv_head_0(x)
         x = self.head_1(x, seg)
         x = self.head_2(x, seg)
         x = self.nearest_upsample2x(x)
         # 32x32
         x = self.up_0a(x, seg)
-        if self.use_style_encoder:
-            x = self.cbn_up_0a(x, z)
-        else:
-            x = self.conv_up_0a(x)
+        x = self.cbn_up_0a(x, z) if self.use_style_encoder else self.conv_up_0a(x)
         x = self.up_0b(x, seg)
         x = self.nearest_upsample2x(x)
         # 64x64
         x = self.up_1a(x, seg)
-        if self.use_style_encoder:
-            x = self.cbn_up_1a(x, z)
-        else:
-            x = self.conv_up_1a(x)
+        x = self.cbn_up_1a(x, z) if self.use_style_encoder else self.conv_up_1a(x)
         x = self.up_1b(x, seg)
         x = self.nearest_upsample2x(x)
         # 128x128
         x = self.up_2a(x, seg)
-        if self.use_style_encoder:
-            x = self.cbn_up_2a(x, z)
-        else:
-            x = self.conv_up_2a(x)
+        x = self.cbn_up_2a(x, z) if self.use_style_encoder else self.conv_up_2a(x)
         x = self.up_2b(x, seg)
         x = self.nearest_upsample2x(x)
         # 256x256
@@ -486,9 +469,7 @@ class SPADEGenerator(nn.Module):
             x = self.nearest_upsample2x(x)
             x1024 = self.conv_img1024(x)
             x = torch.tanh(x256 + x512 + x1024)
-        output = dict()
-        output['fake_images'] = x
-        return output
+        return {'fake_images': x}
 
 
 class StyleEncoder(nn.Module):

@@ -72,8 +72,5 @@ class NonLocal2dBlock(nn.Module):
         out = out.view(n, c // 2, h, w)
         out = self.out_conv(out)
 
-        if self.clamp:
-            out = self.gamma.clamp(-1, 1) * out + x
-        else:
-            out = self.gamma * out + x
+        out = self.gamma.clamp(-1, 1) * out + x if self.clamp else self.gamma * out + x
         return out

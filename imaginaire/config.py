@@ -32,41 +32,47 @@ class AttrDict(dict):
         """Convert object to yaml dict and return."""
         yaml_dict = {}
         for key, value in self.__dict__.items():
-            if isinstance(value, AttrDict):
-                yaml_dict[key] = value.yaml()
-            elif isinstance(value, list):
-                if isinstance(value[0], AttrDict):
-                    new_l = []
-                    for item in value:
-                        new_l.append(item.yaml())
-                    yaml_dict[key] = new_l
-                else:
-                    yaml_dict[key] = value
-            else:
+            if (
+                not isinstance(value, AttrDict)
+                and isinstance(value, list)
+                and isinstance(value[0], AttrDict)
+            ):
+                new_l = [item.yaml() for item in value]
+                yaml_dict[key] = new_l
+            elif (
+                not isinstance(value, AttrDict)
+                and isinstance(value, list)
+                or not isinstance(value, AttrDict)
+            ):
                 yaml_dict[key] = value
+            else:
+                yaml_dict[key] = value.yaml()
         return yaml_dict
 
     def __repr__(self):
         """Print all variables."""
         ret_str = []
         for key, value in self.__dict__.items():
-            if isinstance(value, AttrDict):
-                ret_str.append('{}:'.format(key))
-                child_ret_str = value.__repr__().split('\n')
-                for item in child_ret_str:
-                    ret_str.append('    ' + item)
-            elif isinstance(value, list):
-                if isinstance(value[0], AttrDict):
-                    ret_str.append('{}:'.format(key))
-                    for item in value:
-                        # Treat as AttrDict above.
-                        child_ret_str = item.__repr__().split('\n')
-                        for item in child_ret_str:
-                            ret_str.append('    ' + item)
-                else:
-                    ret_str.append('{}: {}'.format(key, value))
+            if (
+                not isinstance(value, AttrDict)
+                and isinstance(value, list)
+                and isinstance(value[0], AttrDict)
+            ):
+                ret_str.append(f'{key}:')
+                for item in value:
+                    # Treat as AttrDict above.
+                    child_ret_str = item.__repr__().split('\n')
+                    ret_str.extend(f'    {item}' for item in child_ret_str)
+            elif (
+                not isinstance(value, AttrDict)
+                and isinstance(value, list)
+                or not isinstance(value, AttrDict)
+            ):
+                ret_str.append(f'{key}: {value}')
             else:
-                ret_str.append('{}: {}'.format(key, value))
+                ret_str.append(f'{key}:')
+                child_ret_str = value.__repr__().split('\n')
+                ret_str.extend(f'    {item}' for item in child_ret_str)
         return '\n'.join(ret_str)
 
 
@@ -150,7 +156,7 @@ class Config(AttrDict):
         self.inference_args = AttrDict()
 
         # Update with given configurations.
-        assert os.path.exists(filename), 'File {} not exist.'.format(filename)
+        assert os.path.exists(filename), f'File {filename} not exist.'
         loader = yaml.SafeLoader
         loader.add_implicit_resolver(
             u'tag:yaml.org,2002:float',

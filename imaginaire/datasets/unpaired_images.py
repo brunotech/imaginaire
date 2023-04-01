@@ -41,8 +41,9 @@ class Dataset(BaseDataset):
                             'filename': filename,
                         })
         self.mapping = idx_to_key
-        self.epoch_length = max([len(lmdb_keys)
-                                 for _, lmdb_keys in self.mapping.items()])
+        self.epoch_length = max(
+            len(lmdb_keys) for _, lmdb_keys in self.mapping.items()
+        )
         return self.mapping, self.epoch_length
 
     def _sample_keys(self, index):
@@ -87,7 +88,7 @@ class Dataset(BaseDataset):
             lmdb_idx = keys_per_data_type[data_type]['lmdb_idx']
             sequence_name = keys_per_data_type[data_type]['sequence_name']
             filename = keys_per_data_type[data_type]['filename']
-            keys[data_type] = '%s/%s' % (sequence_name, filename)
+            keys[data_type] = f'{sequence_name}/{filename}'
             lmdbs[data_type] = self.lmdbs[data_type][lmdb_idx]
 
         # Load all data for this index.

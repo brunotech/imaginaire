@@ -81,14 +81,14 @@ class Discriminator(nn.Module):
               - fake_features (list): list of lists of features produced by
                 individual patch discriminators for fake images.
         """
-        output_x = dict()
+        output_x = {}
         if 'label' in data:
             fake_input_x = torch.cat(
                 (data['label'], net_G_output['fake_images']), 1)
         else:
             fake_input_x = net_G_output['fake_images']
         output_x['fake_outputs'], output_x['fake_features'], _ = \
-            self.model.forward(fake_input_x)
+                self.model.forward(fake_input_x)
         if real:
             if 'label' in data:
                 real_input_x = torch.cat(
@@ -96,7 +96,7 @@ class Discriminator(nn.Module):
             else:
                 real_input_x = data['images']
             output_x['real_outputs'], output_x['real_features'], _ = \
-                self.model.forward(real_input_x)
+                    self.model.forward(real_input_x)
         return output_x
 
 
@@ -126,12 +126,11 @@ class MultiResPatchDiscriminator(nn.Module):
                  **kwargs):
         super().__init__()
         for key in kwargs:
-            if key != 'type' and key != 'patch_wise':
-                warnings.warn(
-                    "Discriminator argument {} is not used".format(key))
+            if key not in ['type', 'patch_wise']:
+                warnings.warn(f"Discriminator argument {key} is not used")
 
         self.discriminators = nn.ModuleList()
-        for i in range(num_discriminators):
+        for _ in range(num_discriminators):
             net_discriminator = NLayerPatchDiscriminator(
                 kernel_size,
                 num_image_channels,
@@ -198,9 +197,8 @@ class WeightSharedMultiResPatchDiscriminator(nn.Module):
                  **kwargs):
         super().__init__()
         for key in kwargs:
-            if key != 'type' and key != 'patch_wise':
-                warnings.warn(
-                    "Discriminator argument {} is not used".format(key))
+            if key not in ['type', 'patch_wise']:
+                warnings.warn(f"Discriminator argument {key} is not used")
         self.num_discriminators = num_discriminators
         self.discriminator = NLayerPatchDiscriminator(
             kernel_size,
@@ -230,7 +228,7 @@ class WeightSharedMultiResPatchDiscriminator(nn.Module):
         output_list = []
         features_list = []
         input_downsampled = input_x
-        for i in range(self.num_discriminators):
+        for _ in range(self.num_discriminators):
             input_list.append(input_downsampled)
             output, features = self.discriminator(input_downsampled)
             output_list.append(output)
@@ -267,7 +265,7 @@ class NLayerPatchDiscriminator(nn.Module):
         padding = int(np.floor((kernel_size - 1.0) / 2))
         nonlinearity = 'leakyrelu'
         base_conv2d_block = \
-            functools.partial(Conv2dBlock,
+                functools.partial(Conv2dBlock,
                               kernel_size=kernel_size,
                               padding=padding,
                               weight_norm_type=weight_norm_type,
@@ -288,7 +286,7 @@ class NLayerPatchDiscriminator(nn.Module):
                                 padding,
                                 weight_norm_type=weight_norm_type)]]
         for n in range(len(layers)):
-            setattr(self, 'layer' + str(n), nn.Sequential(*layers[n]))
+            setattr(self, f'layer{str(n)}', nn.Sequential(*layers[n]))
 
     def forward(self, input_x):
         r"""Patch Discriminator forward.
@@ -305,7 +303,7 @@ class NLayerPatchDiscriminator(nn.Module):
         """
         res = [input_x]
         for n in range(self.num_layers + 2):
-            layer = getattr(self, 'layer' + str(n))
+            layer = getattr(self, f'layer{str(n)}')
             x = res[-1]
             res.append(layer(x))
         output = res[-1]

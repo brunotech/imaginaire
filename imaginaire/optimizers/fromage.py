@@ -13,7 +13,7 @@ class Fromage(Optimizer):
 
     def __init__(self, params, lr=required, momentum=0):
         if lr is not required and lr < 0.0:
-            raise ValueError("Invalid learning rate: {}".format(lr))
+            raise ValueError(f"Invalid learning rate: {lr}")
         defaults = dict(lr=lr, momentum=momentum)
         super(Fromage, self).__init__(params, defaults)
 
@@ -24,10 +24,7 @@ class Fromage(Optimizer):
             closure (callable, optional): A closure that reevaluates the model
                 and returns the loss.
         """
-        loss = None
-        if closure is not None:
-            loss = closure()
-
+        loss = closure() if closure is not None else None
         for group in self.param_groups:
             for p in group['params']:
                 if p.grad is None:

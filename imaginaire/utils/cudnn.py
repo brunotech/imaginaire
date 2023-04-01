@@ -18,5 +18,5 @@ def init_cudnn(deterministic, benchmark):
     """
     cudnn.deterministic = deterministic
     cudnn.benchmark = benchmark
-    print('cudnn benchmark: {}'.format(benchmark))
-    print('cudnn deterministic: {}'.format(deterministic))
+    print(f'cudnn benchmark: {benchmark}')
+    print(f'cudnn deterministic: {deterministic}')

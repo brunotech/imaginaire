@@ -29,14 +29,14 @@ class Discriminator(nn.Module):
                                        'batch_norm')
         nonlinearity = getattr(dis_cfg, 'nonlinearity', 'leakyrelu')
         base_linear_block = \
-            functools.partial(LinearBlock,
+                functools.partial(LinearBlock,
                               activation_norm_type=activation_norm_type,
                               nonlinearity=nonlinearity,
                               order='CNA')
         dropout_ratio = 0.1
         layers = [base_linear_block(num_input_channels, num_filters),
                   nn.Dropout(dropout_ratio)]
-        for n in range(num_layers):
+        for _ in range(num_layers):
             dropout_ratio *= 1.5
             dropout_ratio = np.min([dropout_ratio, 0.5])
             layers += [base_linear_block(num_filters, num_filters),
@@ -58,6 +58,4 @@ class Discriminator(nn.Module):
         bs = input_x.size()[0]
         input_x = input_x.view(bs, -1)
         pre_softmax_scores = self.model(input_x)
-        outputs = dict()
-        outputs['results'] = pre_softmax_scores
-        return outputs
+        return {'results': pre_softmax_scores}

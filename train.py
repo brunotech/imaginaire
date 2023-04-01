@@ -25,8 +25,7 @@ def parse_args():
     parser.add_argument('--local_rank', type=int, default=0)
     parser.add_argument('--single_gpu', action='store_true')
     parser.add_argument('--num_workers', type=int)
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 def main():
@@ -65,7 +64,7 @@ def main():
 
     # Start training.
     for epoch in range(current_epoch, cfg.max_epoch):
-        print('Epoch {} ...'.format(epoch))
+        print(f'Epoch {epoch} ...')
         if not args.single_gpu:
             train_data_loader.sampler.set_epoch(current_epoch)
         trainer.start_of_epoch(current_epoch)

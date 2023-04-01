@@ -34,21 +34,21 @@ class FlowNet(nn.Module):
 
     def forward(self, input_A, input_B):
         size = input_A.size()
-        assert(len(size) == 4 or len(size) == 5 or len(size) == 6)
-        if len(size) >= 5:
-            if len(size) == 5:
-                b, n, c, h, w = size
-            else:
-                b, t, n, c, h, w = size
-            input_A = input_A.contiguous().view(-1, c, h, w)
-            input_B = input_B.contiguous().view(-1, c, h, w)
-            flow, conf = self.compute_flow_and_conf(input_A, input_B)
-            if len(size) == 5:
-                return flow.view(b, n, 2, h, w), conf.view(b, n, 1, h, w)
-            else:
-                return flow.view(b, t, n, 2, h, w), conf.view(b, t, n, 1, h, w)
-        else:
+        assert len(size) in {4, 5, 6}
+        if len(size) < 5:
             return self.compute_flow_and_conf(input_A, input_B)
+        if len(size) == 5:
+            b, n, c, h, w = size
+        else:
+            b, t, n, c, h, w = size
+        input_A = input_A.contiguous().view(-1, c, h, w)
+        input_B = input_B.contiguous().view(-1, c, h, w)
+        flow, conf = self.compute_flow_and_conf(input_A, input_B)
+        return (
+            (flow.view(b, n, 2, h, w), conf.view(b, n, 1, h, w))
+            if len(size) == 5
+            else (flow.view(b, t, n, 2, h, w), conf.view(b, t, n, 1, h, w))
+        )
 
     def compute_flow_and_conf(self, im1, im2):
         assert(im1.size()[1] == 3)

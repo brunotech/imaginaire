@@ -43,11 +43,7 @@ def draw_openpose_npy(resize_h, resize_w, crop_h, crop_w, original_h,
     for input_type in cfgdata.input_types:
         if op_key in input_type:
             nc = input_type[op_key].num_channels
-    if crop_h is not None:
-        h, w = crop_h, crop_w
-    else:
-        h, w = resize_h, resize_w
-
+    h, w = (crop_h, crop_w) if crop_h is not None else (resize_h, resize_w)
     outputs = []
     for keypoint_npy in keypoints_npy:
         person_keypoints = np.asarray(keypoint_npy).reshape(-1, 137, 3)[0]
@@ -326,13 +322,13 @@ def define_edge_lists(basic_points_only):
 
     # Face edges.
     face_list = [
-        [range(0, 17)],   # face contour
-        [range(17, 22)],  # left eyebrow
-        [range(22, 27)],  # right eyebrow
-        [[28, 31], range(31, 36), [35, 28]],   # nose
-        [[36, 37, 38, 39], [39, 40, 41, 36]],  # left eye
-        [[42, 43, 44, 45], [45, 46, 47, 42]],  # right eye
-        [range(48, 55), [54, 55, 56, 57, 58, 59, 48]],  # mouth
+        [range(17)],
+        [range(17, 22)],
+        [range(22, 27)],
+        [[28, 31], range(31, 36), [35, 28]],
+        [[36, 37, 38, 39], [39, 40, 41, 36]],
+        [[42, 43, 44, 45], [45, 46, 47, 42]],
+        [range(48, 55), [54, 55, 56, 57, 58, 59, 48]],
     ]
 
     return pose_edge_list, pose_color_list, hand_edge_list, hand_color_list, \
@@ -348,7 +344,7 @@ def tensor2pose(cfg, label_tensor):
     Returns:
         (HxWx3 numpy array or list of numpy arrays): Pose map.
     """
-    if label_tensor.dim() == 5 or label_tensor.dim() == 4:
+    if label_tensor.dim() in [5, 4]:
         return [tensor2pose(cfg, label_tensor[idx])
                 for idx in range(label_tensor.size(0))]
 
